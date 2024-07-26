@@ -7,7 +7,8 @@ using UnityEngine;
 
 public class PlayerName : NetworkBehaviour
 {
-    public TMP_Text playerNameText;
+    public TMP_Text playerNameText; // Assign this in the Inspector
+
     private NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>();
 
     public override void OnNetworkSpawn()
@@ -18,6 +19,9 @@ public class PlayerName : NetworkBehaviour
         {
             SetPlayerNameServerRpc(PlayerPrefs.GetString("PlayerName", "Player " + OwnerClientId));
         }
+
+        // Update the player name text immediately after spawning
+        OnPlayerNameChanged(default, playerName.Value);
     }
 
     [ServerRpc]

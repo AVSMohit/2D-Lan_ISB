@@ -13,12 +13,14 @@ using System.Threading.Tasks;
 
 public class NetworkUI : MonoBehaviour
 {
-    public TMP_InputField joinCodeInputField;
+    public InputField nameInputField;
+    public InputField joinCodeInputField;
     public Button hostButton;
     public Button clientButton;
-    public TMP_Text joinCodeDisplay;
     public TMP_Text statusText;
-    public TMP_InputField nameInputField;
+
+    public ChatManager chatManager; // Reference to the ChatManager
+
     private async void Start()
     {
         hostButton.onClick.AddListener(StartHost);
@@ -44,21 +46,30 @@ public class NetworkUI : MonoBehaviour
         Debug.Log("Starting Host...");
 
         await UnityServicesInitializer.InitializeUnityServices();
-        var allocation = await RelayService.Instance.CreateAllocationAsync(4); // Allow up to 4 connections
-        var joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
 
-        Logger.Log($"Join Code: {joinCode}");
-        Debug.Log($"Join Code: {joinCode}");
-
-        var relayServerData = new RelayServerData(allocation, "dtls");
-
-        NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
-
-        NetworkManager.Singleton.StartHost();
-
-        if (statusText != null)
+        try
         {
-            statusText.text = $"Join Code: {joinCode}";
+            var allocation = await RelayService.Instance.CreateAllocationAsync(4); // Allow up to 4 connections
+            var joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
+
+            Logger.Log($"Join Code: {joinCode}");
+            Debug.Log($"Join Code: {joinCode}");
+
+            var relayServerData = new RelayServerData(allocation, "dtls");
+
+            NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
+
+            NetworkManager.Singleton.StartHost();
+
+            if (statusText != null)
+            {
+                statusText.text = $"Join Code: {joinCode}";
+            }
+        }
+        catch (RelayServiceException e)
+        {
+            Debug.LogError($"Relay Service Error: {e.Message}");
+            statusText.text = $"Relay Service Error: {e.Message}";
         }
     }
 
@@ -84,21 +95,41 @@ public class NetworkUI : MonoBehaviour
         Debug.Log($"Attempting to join with code: {joinCode}");
 
         await UnityServicesInitializer.InitializeUnityServices();
-        var joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
 
-        var relayServerData = new RelayServerData(joinAllocation, "dtls");
-
-        NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
-
-        if (NetworkManager.Singleton.StartClient())
+        try
         {
-            Logger.Log("Client started successfully.");
-            Debug.Log("Client started successfully.");
+            var joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
+
+            var relayServerData = new RelayServerData(joinAllocation, "dtls");
+
+            NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
+
+            if (NetworkManager.Singleton.StartClient())
+            {
+                Logger.Log("Client started successfully.");
+                Debug.Log("Client started successfully.");
+            }
+            else
+            {
+                Logger.Log("Failed to start Client.");
+                Debug.Log("Failed to start Client.");
+            }
         }
-        else
+        catch (RelayServiceException e)
         {
-            Logger.Log("Failed to start Client.");
-            Debug.Log("Failed to start Client.");
+            Debug.LogError($"Relay Service Error: {e.Message}");
+            statusText.text = $"Relay Service Error: {e.Message}";
+        }
+    }
+
+    private void SpawnLocalPlayer()
+    {
+        if (NetworkManager.Singleton.IsHost)
+        {
+            ulong localClientId = NetworkManager.Singleton.LocalClientId;
+            GameObject localPlayer = NetworkManager.Singleton.ConnectedClients[localClientId].PlayerObject.gameObject;
+            var playerNameScript = localPlayer.GetComponent<PlayerName>();
+            playerNameScript.SetPlayerNameServerRpc(PlayerPrefs.GetString("PlayerName"));
         }
     }
 }
