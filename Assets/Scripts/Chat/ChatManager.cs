@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
@@ -15,24 +16,6 @@ public class ChatManager : NetworkBehaviour
 
     private void Start()
     {
-        // Check for null references
-        if (chatInputField == null)
-        {
-            Debug.LogError("Chat Input Field is not assigned.");
-        }
-        if (sendButton == null)
-        {
-            Debug.LogError("Send Button is not assigned.");
-        }
-        if (chatDisplayText == null)
-        {
-            Debug.LogError("Chat Display Text is not assigned.");
-        }
-        if (chatScrollRect == null)
-        {
-            Debug.LogError("Chat Scroll Rect is not assigned.");
-        }
-
         sendButton.onClick.AddListener(OnSendButtonClicked);
         chatInputField.onEndEdit.AddListener(OnChatInputEndEdit);
     }
@@ -84,5 +67,10 @@ public class ChatManager : NetworkBehaviour
         Canvas.ForceUpdateCanvases();
         chatScrollRect.verticalNormalizedPosition = 0f;
         Canvas.ForceUpdateCanvases();
+    }
+
+    private string GetDebuggerDisplay()
+    {
+        return ToString();
     }
 }

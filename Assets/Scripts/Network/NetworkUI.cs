@@ -18,15 +18,14 @@ public class NetworkUI : MonoBehaviour
     public Button hostButton;
     public Button clientButton;
     public TMP_Text statusText;
-
-    public ChatManager chatManager; // Reference to the ChatManager
+    public LobbyManager lobbyManager; // Reference to the LobbyManager
+    public GameObject joinPanel; // Reference to the Join Panel
+    public GameObject lobbyPanel; // Reference to the Lobby Panel
 
     private async void Start()
     {
         hostButton.onClick.AddListener(StartHost);
         clientButton.onClick.AddListener(StartClient);
-
-        Logger.Log("NetworkUI started.");
 
         await UnityServicesInitializer.InitializeUnityServices();
     }
@@ -42,29 +41,28 @@ public class NetworkUI : MonoBehaviour
 
         PlayerPrefs.SetString("PlayerName", playerName);
 
-        Logger.Log("Starting Host...");
-        Debug.Log("Starting Host...");
-
         await UnityServicesInitializer.InitializeUnityServices();
-
         try
         {
             var allocation = await RelayService.Instance.CreateAllocationAsync(4); // Allow up to 4 connections
             var joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
 
-            Logger.Log($"Join Code: {joinCode}");
-            Debug.Log($"Join Code: {joinCode}");
+            statusText.text = $"Join Code: {joinCode}";
+            Debug.Log($"Join code generated: {joinCode}");
 
             var relayServerData = new RelayServerData(allocation, "dtls");
-
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
 
             NetworkManager.Singleton.StartHost();
+            Debug.Log("Host started.");
 
-            if (statusText != null)
-            {
-                statusText.text = $"Join Code: {joinCode}";
-            }
+            lobbyManager.UpdateLobbyUI();
+            lobbyManager.DisplayRoomCode(joinCode); // Display the room code in the lobby panel
+            joinPanel.SetActive(false);
+            lobbyPanel.SetActive(true);
+
+            // Enable Start Game button for the host
+            lobbyManager.EnableStartGameButton();
         }
         catch (RelayServiceException e)
         {
@@ -91,45 +89,25 @@ public class NetworkUI : MonoBehaviour
 
         PlayerPrefs.SetString("PlayerName", playerName);
 
-        Logger.Log($"Attempting to join with code: {joinCode}");
-        Debug.Log($"Attempting to join with code: {joinCode}");
-
         await UnityServicesInitializer.InitializeUnityServices();
-
         try
         {
             var joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
 
             var relayServerData = new RelayServerData(joinAllocation, "dtls");
-
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
 
-            if (NetworkManager.Singleton.StartClient())
-            {
-                Logger.Log("Client started successfully.");
-                Debug.Log("Client started successfully.");
-            }
-            else
-            {
-                Logger.Log("Failed to start Client.");
-                Debug.Log("Failed to start Client.");
-            }
+            NetworkManager.Singleton.StartClient();
+            Debug.Log("Client started.");
+
+            lobbyManager.UpdateLobbyUI();
+            joinPanel.SetActive(false);
+            lobbyPanel.SetActive(true);
         }
         catch (RelayServiceException e)
         {
             Debug.LogError($"Relay Service Error: {e.Message}");
             statusText.text = $"Relay Service Error: {e.Message}";
-        }
-    }
-
-    private void SpawnLocalPlayer()
-    {
-        if (NetworkManager.Singleton.IsHost)
-        {
-            ulong localClientId = NetworkManager.Singleton.LocalClientId;
-            GameObject localPlayer = NetworkManager.Singleton.ConnectedClients[localClientId].PlayerObject.gameObject;
-            var playerNameScript = localPlayer.GetComponent<PlayerName>();
-            playerNameScript.SetPlayerNameServerRpc(PlayerPrefs.GetString("PlayerName"));
         }
     }
 }

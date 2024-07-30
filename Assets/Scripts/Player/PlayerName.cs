@@ -7,7 +7,7 @@ using UnityEngine;
 
 public class PlayerName : NetworkBehaviour
 {
-    public TMP_Text playerNameText; // Assign this in the Inspector
+    public TMP_Text playerNameText; // TextMeshPro Text to display the player name
 
     private NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>();
 
@@ -17,7 +17,8 @@ public class PlayerName : NetworkBehaviour
 
         if (IsOwner)
         {
-            SetPlayerNameServerRpc(PlayerPrefs.GetString("PlayerName", "Player " + OwnerClientId));
+            string name = PlayerPrefs.GetString("PlayerName", $"Player {OwnerClientId}");
+            SetPlayerNameServerRpc(name);
         }
 
         // Update the player name text immediately after spawning
@@ -25,13 +26,13 @@ public class PlayerName : NetworkBehaviour
     }
 
     [ServerRpc]
-    public void SetPlayerNameServerRpc(string newName)
+    public void SetPlayerNameServerRpc(string newName, ServerRpcParams rpcParams = default)
     {
         playerName.Value = newName;
     }
 
-    private void OnPlayerNameChanged(FixedString32Bytes oldValue, FixedString32Bytes newValue)
+    private void OnPlayerNameChanged(FixedString32Bytes oldName, FixedString32Bytes newName)
     {
-        playerNameText.text = newValue.ToString();
+        playerNameText.text = newName.ToString();
     }
 }

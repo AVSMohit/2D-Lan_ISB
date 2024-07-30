@@ -23,7 +23,7 @@ public class UnityServicesInitializer : MonoBehaviour
         if (!AuthenticationService.Instance.IsSignedIn)
         {
             await AuthenticationService.Instance.SignInAnonymouslyAsync();
-            Debug.Log("Signed in anonymously.");
+            //Debug.Log("Signed in anonymously.");
         }
     }
 }
