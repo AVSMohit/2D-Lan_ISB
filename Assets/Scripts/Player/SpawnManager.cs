@@ -118,4 +118,16 @@ public class SpawnManager : NetworkBehaviour
             RequestSpawnPointServerRpc();
         }
     }
+
+    public Transform GetSpawnPointForPlayer(ulong clientId)
+    {
+        foreach (var spawnPoint in spawnPoints)
+        {
+            if (!occupiedSpawnPoints.Contains(System.Array.IndexOf(spawnPoints, spawnPoint)))
+            {
+                return spawnPoint;
+            }
+        }
+        return null;
+    }
 }

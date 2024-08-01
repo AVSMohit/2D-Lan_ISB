@@ -6,7 +6,6 @@ using UnityEngine.SceneManagement;
 
 public class SceneTransitionManager : MonoBehaviour
 {
-
     public static SceneTransitionManager Instance;
     public CameraController cameraController; // Reference to the CameraController script
 
@@ -43,20 +42,27 @@ public class SceneTransitionManager : MonoBehaviour
         {
             cameraController.UpdatePlayerList();
         }
+
+        RespawnPlayers();
     }
 
-    private void UpdateCameraAfterSceneLoad()
+    private void RespawnPlayers()
     {
-        SceneManager.sceneLoaded += OnSceneLoaded;
-    }
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-    {
-        if (cameraController != null)
+        var spawnManager = FindObjectOfType<SpawnManager>();
+        if (spawnManager != null)
         {
-            cameraController.UpdatePlayerList();
+            foreach (var clientId in NetworkManager.Singleton.ConnectedClientsIds)
+            {
+                var playerObject = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject;
+                if (playerObject != null)
+                {
+                    var spawnPoint = spawnManager.GetSpawnPointForPlayer(clientId);
+                    if (spawnPoint != null)
+                    {
+                        playerObject.transform.position = spawnPoint.position;
+                    }
+                }
+            }
         }
-
-        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 }

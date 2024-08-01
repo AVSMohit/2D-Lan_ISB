@@ -8,7 +8,6 @@ public class PlayerSpawnHandler : NetworkBehaviour
 {
     private SpawnManager spawnManager;
 
-   
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
@@ -22,7 +21,7 @@ public class PlayerSpawnHandler : NetworkBehaviour
     private IEnumerator InitializePlayer()
     {
         // Wait until the game scene is fully loaded
-        while (SceneManager.GetActiveScene().name != "SplitPath")
+        while (!SceneManager.GetActiveScene().isLoaded)
         {
             yield return null; // Wait for the next frame
         }
@@ -38,7 +37,7 @@ public class PlayerSpawnHandler : NetworkBehaviour
             }
         }
 
-        // Wait for the signal to request spawn point
+        // Request a spawn point from the server
         if (NetworkManager.Singleton.IsHost)
         {
             spawnManager.RequestSpawnPointServerRpc();

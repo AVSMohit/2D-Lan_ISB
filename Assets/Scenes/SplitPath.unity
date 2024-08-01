@@ -897,6 +897,51 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 13
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &291414476
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 291414478}
+  - component: {fileID: 291414477}
+  m_Layer: 0
+  m_Name: GravityManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &291414477
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 291414476}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 826697c7ba7c82949890bc9620860b79, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  enableGravity: 0
+--- !u!4 &291414478
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 291414476}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -6.531571, y: -1.1129636, z: 0.06988191}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 21
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &330721506
 GameObject:
   m_ObjectHideFlags: 0
@@ -14548,7 +14593,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5013302284713693679, guid: 26fd8da1e17c1454bae06764ec3dbdd4, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 155.61421
+      value: 155.61433
       objectReference: {fileID: 0}
     - target: {fileID: 5925069311659109175, guid: 26fd8da1e17c1454bae06764ec3dbdd4, type: 3}
       propertyPath: m_AnchorMax.x
@@ -14564,6 +14609,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8202842466168097464, guid: 26fd8da1e17c1454bae06764ec3dbdd4, type: 3}
       propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8202842466168097464, guid: 26fd8da1e17c1454bae06764ec3dbdd4, type: 3}
+      propertyPath: m_AnchorMin.x
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
