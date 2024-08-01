@@ -73,4 +73,9 @@ public class ChatManager : NetworkBehaviour
     {
         return ToString();
     }
+
+    private void Update()
+    {
+        
+    }
 }

@@ -1337,7 +1337,7 @@ MonoBehaviour:
   NetworkConfig:
     ProtocolVersion: 0
     NetworkTransport: {fileID: 834480924}
-    PlayerPrefab: {fileID: 8842054500325487970, guid: 5da9b7ec00239cd4b8505b7a4deebc08, type: 3}
+    PlayerPrefab: {fileID: 5848706654734723516, guid: 5da9b7ec00239cd4b8505b7a4deebc08, type: 3}
     Prefabs:
       NetworkPrefabsLists:
       - {fileID: 11400000, guid: edfd334677f28a64c8b28231d372f489, type: 2}
@@ -3043,7 +3043,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6577824b069f05d44bdd6881384df7de, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playerPrefab: {fileID: 8842054500325487970, guid: 5da9b7ec00239cd4b8505b7a4deebc08, type: 3}
+  playerPrefab: {fileID: 5848706654734723516, guid: 5da9b7ec00239cd4b8505b7a4deebc08, type: 3}
   clientStatusText: {fileID: 1082363672}
 --- !u!114 &1852292799
 MonoBehaviour:

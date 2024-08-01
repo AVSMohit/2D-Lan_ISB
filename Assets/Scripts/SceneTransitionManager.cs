@@ -28,7 +28,20 @@ public class SceneTransitionManager : MonoBehaviour
         if (NetworkManager.Singleton.IsHost)
         {
             NetworkManager.Singleton.SceneManager.LoadScene(sceneName, LoadSceneMode.Single);
-            UpdateCameraAfterSceneLoad();
+            StartCoroutine(WaitForSceneLoad(sceneName));
+        }
+    }
+
+    private IEnumerator WaitForSceneLoad(string sceneName)
+    {
+        while (SceneManager.GetActiveScene().name != sceneName)
+        {
+            yield return null;
+        }
+
+        if (cameraController != null)
+        {
+            cameraController.UpdatePlayerList();
         }
     }
 

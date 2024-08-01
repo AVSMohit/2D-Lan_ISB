@@ -11,12 +11,14 @@ public class MainGAte : InteractableClass
     public override void Interact()
     {
         base.Interact();
-        foreach (Switch sw in switchsForMainGate) 
+        for(int i = 0; i < switchsForMainGate.Length; i++)
         {
-            if(sw == true)
-            {
-                allTogglesOn = true;
-            }
+            
+                if (switchsForMainGate[i].mainDoorToggle == true)
+                {
+                    allTogglesOn = true;
+                }
+                
         }
     }
 

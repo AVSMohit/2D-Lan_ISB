@@ -8,45 +8,32 @@ public class Switch : NetworkBehaviour
 {
 
     public InteractableClass[] objectsToBeInteracted;
+
     public SpriteRenderer spriteRenderer;
+
     public Color activatedColor = Color.green;
+
     bool isActivated = false;
     public bool mainDoorSwitch = false;
     public bool mainDoorToggle = false;
+
+    public ulong playerID;    
+
+    PlayerController playerController;
     // Start is called before the first frame update
+    private bool playerInRange = false;
+
     private void OnTriggerEnter2D(Collider2D collision)
     {
-       
-
-            if(collision.CompareTag("Player") )
-            {
-                PlayerController controller= collision.GetComponent<PlayerController>();
-
-                controller.interactText.gameObject.SetActive(true);
-                if (!isActivated)
-                {               
-                        isActivated = true;
-                                 
-                }
-
-            }
-
-        
-        
-    }
-
-    private void Update()
-    {
-        if (isActivated)
+        if (collision.CompareTag("Player"))
         {
-           
-                if (Input.GetKeyDown(KeyCode.E))
-                {
-                    
-
-                    ActivateObjectServerRpc();
-                }
-            
+            PlayerController controller = collision.GetComponent<PlayerController>();
+            if (controller != null && (!mainDoorSwitch || controller.OwnerClientId == playerID))
+            {
+                playerController = controller;
+                controller.interactText.gameObject.SetActive(true);
+                playerInRange = true;
+            }
         }
     }
 
@@ -55,39 +42,51 @@ public class Switch : NetworkBehaviour
         if (collision.CompareTag("Player"))
         {
             PlayerController controller = collision.GetComponent<PlayerController>();
+            if (controller == playerController)
+            {
+                controller.interactText.gameObject.SetActive(false);
+                playerInRange = false;
+                playerController = null;
+            }
+        }
+    }
 
-            controller.interactText.gameObject.SetActive(false);
-             isActivated = false;
-
+    private void Update()
+    {
+        if (playerInRange && !isActivated && Input.GetKeyDown(KeyCode.E))
+        {
+            ActivateObjectServerRpc(NetworkManager.Singleton.LocalClientId);
         }
     }
 
     [ServerRpc(RequireOwnership = false)]
-    void ActivateObjectServerRpc(ServerRpcParams rpcParams = default)
+    void ActivateObjectServerRpc(ulong clientId, ServerRpcParams rpcParams = default)
     {
-        ActivateObjectClientRpc();
+        if (!isActivated && (!mainDoorSwitch || clientId == playerID)) // Validate the correct client
+        {
+            isActivated = true;
+            ActivateObjectsClientRpc();
+        }
     }
 
     [ClientRpc]
-    void ActivateObjectClientRpc()
+    void ActivateObjectsClientRpc()
     {
         spriteRenderer.color = activatedColor;
-        if (!mainDoorSwitch)
-        { 
-            foreach(var interactable in objectsToBeInteracted)
-            {
-                interactable.Interact();
-            }
-        }
-        else
+        foreach (InteractableClass interactable in objectsToBeInteracted)
         {
-            foreach (var interactable in objectsToBeInteracted)
-            {
-                interactable.Interact();
-            }
+            interactable.Interact();
+        }
+
+        if (mainDoorSwitch)
+        {
             mainDoorToggle = true;
         }
     }
 
-    
+    private void Start()
+    {
+        spriteRenderer = gameObject.GetComponent<SpriteRenderer>();
+    }
+
 }
