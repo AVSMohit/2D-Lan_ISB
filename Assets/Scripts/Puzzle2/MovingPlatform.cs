@@ -14,11 +14,18 @@ public class MovingPlatform : NetworkBehaviour
     private Vector3 startPosition;
     private List<PlayerController> playersOnPlatform = new List<PlayerController>();
     private Vector3 lastPosition;
+    public Color nonMovingColor;
+    public Color movingColor;
 
+    public SpriteRenderer[] spriteRenderers;
     private void Start()
     {
         startPosition = transform.position;
         lastPosition = transform.position;
+        for(int i = 0; i < spriteRenderers.Length; i++)
+        {
+            spriteRenderers[i].color = nonMovingColor;
+        }
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
@@ -51,13 +58,21 @@ public class MovingPlatform : NetworkBehaviour
 
     private void CheckWeight()
     {
-        if (!isMoving && currentWeight >= requiredWeight)
+        if (!isMoving && currentWeight == requiredWeight)
         {
             isMoving = true;
+            for (int i = 0; i < spriteRenderers.Length; i++)
+            {
+                spriteRenderers[i].color = movingColor;
+            }
             StartCoroutine(MovePlatform(targetPosition.position));
         }
         else if (isMoving && currentWeight < requiredWeight)
         {
+            for (int i = 0; i < spriteRenderers.Length; i++)
+            {
+                spriteRenderers[i].color = nonMovingColor;
+            }
             StopAllCoroutines();
             StartCoroutine(WaitAndMovePlatformDown());
         }

@@ -1,32 +1,45 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
 
 public class MainGAte : InteractableClass
 {
     public Switch[] switchsForMainGate;
-
-    bool allTogglesOn;
-    public override void Interact()
+    public SpriteRenderer spriteRenderer;
+    private bool allTogglesOn;
+    private void Start()
     {
-        base.Interact();
-        for(int i = 0; i < switchsForMainGate.Length; i++)
+        spriteRenderer = gameObject.GetComponentInChildren<SpriteRenderer>();
+        allTogglesOn = false;
+        
+    }
+
+    public void CheckToggle()
+    {
+        allTogglesOn = true;
+        foreach (Switch _switch in switchsForMainGate)
         {
-            
-                if (switchsForMainGate[i].mainDoorToggle == true)
-                {
-                    allTogglesOn = true;
-                }
-                
+            if (!_switch.mainDoorToggle)
+            {
+                allTogglesOn = false;
+                spriteRenderer.color = Color.red;
+                Debug.Log("Switch " + _switch.gameObject.name + " is not activated.");
+                return;
+            }
+        }
+
+        if (allTogglesOn)
+        {
+            spriteRenderer.color = Color.green;
+            Debug.Log("All switches are activated. Opening the gate.");
+            this.gameObject.GetComponent<BoxCollider2D>().isTrigger = true;
         }
     }
 
-    private void Update()
+    public override void Interact()
     {
-        if (allTogglesOn)
-        { 
-            this.gameObject.SetActive(false);
-        }
+        CheckToggle();
     }
 }

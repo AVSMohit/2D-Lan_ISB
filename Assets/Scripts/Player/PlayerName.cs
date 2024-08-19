@@ -9,7 +9,7 @@ public class PlayerName : NetworkBehaviour
 {
     public TMP_Text playerNameText; // TextMeshPro Text to display the player name
 
-    private NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>();
+    public NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>();
 
     public override void OnNetworkSpawn()
     {

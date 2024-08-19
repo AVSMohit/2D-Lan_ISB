@@ -13,7 +13,8 @@ using System.Threading.Tasks;
 
 public class NetworkUI : MonoBehaviour
 {
-    public InputField nameInputField;
+    public InputField hostNameInputField;
+    public InputField clientNameInputField;
     public InputField joinCodeInputField;
     public Button hostButton;
     public Button clientButton;
@@ -32,7 +33,7 @@ public class NetworkUI : MonoBehaviour
 
     private async void StartHost()
     {
-        string playerName = nameInputField.text;
+        string playerName = hostNameInputField.text;
         if (string.IsNullOrEmpty(playerName))
         {
             statusText.text = "Please enter a name.";
@@ -73,7 +74,7 @@ public class NetworkUI : MonoBehaviour
 
     private async void StartClient()
     {
-        string playerName = nameInputField.text;
+        string playerName = clientNameInputField.text;
         string joinCode = joinCodeInputField.text;
         if (string.IsNullOrEmpty(playerName))
         {

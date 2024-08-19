@@ -31,7 +31,7 @@ public class PlayerSpawnHandler : NetworkBehaviour
         {
             spawnManager = FindObjectOfType<SpawnManager>();
             if (spawnManager == null)
-            {
+            { 
                 Debug.LogError("SpawnManager not found in game scene!");
                 yield return null; // Wait for the next frame
             }

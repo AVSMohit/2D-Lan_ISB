@@ -8,20 +8,20 @@ public class Switch : NetworkBehaviour
 {
 
     public InteractableClass[] objectsToBeInteracted;
-
     public SpriteRenderer spriteRenderer;
-
     public Color activatedColor = Color.green;
-
-    bool isActivated = false;
+    private bool isActivated = false;
     public bool mainDoorSwitch = false;
     public bool mainDoorToggle = false;
-
-    public ulong playerID;    
-
-    PlayerController playerController;
-    // Start is called before the first frame update
+    public ulong playerID;
     private bool playerInRange = false;
+    private PlayerController playerController;
+    public MainGAte mainGate; // Reference to MainGate
+
+    private void Start()
+    {
+        spriteRenderer = gameObject.GetComponent<SpriteRenderer>();
+    }
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
@@ -55,6 +55,7 @@ public class Switch : NetworkBehaviour
     {
         if (playerInRange && !isActivated && Input.GetKeyDown(KeyCode.E))
         {
+            Debug.Log("Player " + playerController.OwnerClientId + " is activating the switch.");
             ActivateObjectServerRpc(NetworkManager.Singleton.LocalClientId);
         }
     }
@@ -62,7 +63,7 @@ public class Switch : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     void ActivateObjectServerRpc(ulong clientId, ServerRpcParams rpcParams = default)
     {
-        if (!isActivated && (!mainDoorSwitch || clientId == playerID)) // Validate the correct client
+        if (!isActivated && (!mainDoorSwitch || clientId == playerID))
         {
             isActivated = true;
             ActivateObjectsClientRpc();
@@ -81,12 +82,12 @@ public class Switch : NetworkBehaviour
         if (mainDoorSwitch)
         {
             mainDoorToggle = true;
+            Debug.Log("Main door switch activated: " + gameObject.name);
+            if (mainGate != null)
+            {
+                mainGate.Interact();
+            }
         }
-    }
-
-    private void Start()
-    {
-        spriteRenderer = gameObject.GetComponent<SpriteRenderer>();
     }
 
 }
