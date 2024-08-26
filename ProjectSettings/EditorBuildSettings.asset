@@ -6,6 +6,18 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
+    path: Assets/Scenes/LobbyScene.unity
     guid: 2cda990e2423bbf4892e6590ba056729
+  - enabled: 1
+    path: Assets/Scenes/SplitPath.unity
+    guid: a489c0649c46bf543b8c76c6f1ab2849
+  - enabled: 1
+    path: Assets/Scenes/Puzzle2.unity
+    guid: c64a3e0a4477cf24f92acd76aacddb61
+  - enabled: 1
+    path: Assets/Scenes/Puzzle3.unity
+    guid: 443b4fae72d580a428cfc7d769050ff8
+  - enabled: 1
+    path: Assets/Scenes/Puzzle4.unity
+    guid: 6719960fb82741d49a24ef17666d68bc
   m_configObjects: {}
