@@ -1,8 +1,8 @@
 using System.Collections;
-using System.Collections.Generic;
-using Unity.Netcode;
 using UnityEngine;
+using Unity.Netcode;
 using UnityEngine.SceneManagement;
+using System.Runtime.CompilerServices;
 
 public class SceneTransitionManager : MonoBehaviour
 {
@@ -24,44 +24,47 @@ public class SceneTransitionManager : MonoBehaviour
 
     public void TransitionToScene(string sceneName)
     {
-        if (NetworkManager.Singleton.IsHost)
-        {
-            NetworkManager.Singleton.SceneManager.LoadScene(sceneName, LoadSceneMode.Single);
-            StartCoroutine(WaitForSceneLoad(sceneName));
-        }
+        // Subscribe to the scene loaded event
+        SceneManager.sceneLoaded += OnSceneLoaded;
+
+        // Load the new scene
+        NetworkManager.Singleton.SceneManager.LoadScene(sceneName, LoadSceneMode.Single);
     }
 
-    private IEnumerator WaitForSceneLoad(string sceneName)
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        while (SceneManager.GetActiveScene().name != sceneName)
-        {
-            yield return null;
-        }
+        // Once the scene is loaded, assign players to spawn points
+        PlacePlayersAtSpawnPoints();
 
-        if (cameraController != null)
-        {
-            cameraController.UpdatePlayerList();
-        }
-
-        RespawnPlayers();
+        // Unsubscribe from the scene loaded event
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
-    private void RespawnPlayers()
+    private void PlacePlayersAtSpawnPoints()
     {
         var spawnManager = FindObjectOfType<SpawnManager>();
-        if (spawnManager != null)
+
+        if (spawnManager == null)
         {
-            foreach (var clientId in NetworkManager.Singleton.ConnectedClientsIds)
+            Debug.LogError("SpawnManager not found in the scene!");
+            return;
+        }
+
+        // For each player, move them to their spawn point
+        foreach (var client in NetworkManager.Singleton.ConnectedClients)
+        {
+            ulong clientId = client.Key;
+            Transform spawnPoint = spawnManager.GetSpawnPointForPlayer(clientId);
+
+            if (spawnPoint != null)
             {
-                var playerObject = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject;
-                if (playerObject != null)
-                {
-                    var spawnPoint = spawnManager.GetSpawnPointForPlayer(clientId);
-                    if (spawnPoint != null)
-                    {
-                        playerObject.transform.position = spawnPoint.position;
-                    }
-                }
+                var playerObject = client.Value.PlayerObject;
+                playerObject.transform.position = spawnPoint.position;
+                Debug.Log($"Player {clientId} moved to spawn point {spawnPoint.position}");
+            }
+            else
+            {
+                Debug.LogWarning($"No spawn point found for player {clientId}");
             }
         }
     }
