@@ -1,45 +1,58 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using Unity.Netcode;
 using UnityEngine.SceneManagement;
 
 public class PlayerSpawnHandler : NetworkBehaviour
 {
-    private void Start()
+    private SpawnManager spawnManager;
+
+    public override void OnNetworkSpawn()
     {
+        base.OnNetworkSpawn();
+
         if (IsOwner)
         {
-            StartCoroutine(WaitForSceneLoadAndPosition());
+            StartCoroutine(InitializePlayer());
         }
     }
 
-    private IEnumerator WaitForSceneLoadAndPosition()
+    private IEnumerator InitializePlayer()
     {
-        // Wait until the scene has fully loaded and the SpawnManager is initialized
-        yield return new WaitUntil(() => FindObjectOfType<SpawnManager>() != null);
-
-        // Get the SpawnManager from the scene
-        var spawnManager = FindObjectOfType<SpawnManager>();
-
-        if (spawnManager == null)
+        // Wait until the game scene is fully loaded
+        while (!SceneManager.GetActiveScene().isLoaded)
         {
-            Debug.LogError("SpawnManager not found in the scene!");
-            yield break;
+            yield return null; // Wait for the next frame
         }
 
-        // Assign the player to the correct spawn point
-        Transform spawnPoint = spawnManager.GetSpawnPointForPlayer(NetworkManager.LocalClientId);
-
-        if (spawnPoint != null)
+        // Wait until the SpawnManager is found
+        while (spawnManager == null)
         {
-            // Move the player to the assigned spawn point
-            transform.position = spawnPoint.position;
-            Debug.Log($"Player {NetworkManager.LocalClientId} moved to spawn point {spawnPoint.position}");
+            spawnManager = FindObjectOfType<SpawnManager>();
+            if (spawnManager == null)
+            { 
+                Debug.LogError("SpawnManager not found in game scene!");
+                yield return null; // Wait for the next frame
+            }
         }
-        else
+
+        // Request a spawn point from the server
+        if (NetworkManager.Singleton.IsHost)
         {
-            Debug.LogWarning($"No spawn point found for player {NetworkManager.LocalClientId}");
+            spawnManager.RequestSpawnPointServerRpc();
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (IsOwner && spawnManager != null)
+        {
+            int index = System.Array.IndexOf(spawnManager.spawnPoints, transform);
+            if (index >= 0)
+            {
+                spawnManager.ReleaseSpawnPointServerRpc(index);
+            }
         }
     }
 }
-

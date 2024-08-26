@@ -19,13 +19,13 @@ public class GameManager : MonoBehaviour
                 clientStatusText.text = "Waiting for clients...";
             }
         }
-        // Logger.Log("GameManager started.");
+       // Logger.Log("GameManager started.");
     }
 
     private void OnClientConnected(ulong clientId)
     {
-        //  Logger.Log($"Client connected with ID: {clientId}");
-        // Debug.Log($"Client connected with ID: {clientId}");
+       //  Logger.Log($"Client connected with ID: {clientId}");
+       // Debug.Log($"Client connected with ID: {clientId}");
         if (clientStatusText != null)
         {
             clientStatusText.text = $"Client connected: {clientId}";

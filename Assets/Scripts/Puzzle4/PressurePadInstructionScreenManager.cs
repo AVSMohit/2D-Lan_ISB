@@ -19,13 +19,9 @@ public class PressurePadInstructionScreenManager : MonoBehaviour
         videoPlayer.SetActive(false);
         rawImage.SetActive(false);
         startButton.onClick.AddListener(StartPuzzle);
-      
-        startButton.onClick.AddListener(GlobaGameManager.Instance.ResumeTimer);
 
 
     }
-
-   
 
     public void SetInstructions(string[] playerNames, string[] padAssignments)
     {

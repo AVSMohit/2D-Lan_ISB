@@ -22,17 +22,13 @@ public class UiButtonScripts : MonoBehaviour
     public void OnHoverEnter()
     {
         transform.localScale = Vector3.Lerp(initialScale, hoverScale, scaleTime  * Time.deltaTime);
-        if (childText != null)
-            childText.color = this.GetComponent<Button>().colors.normalColor;
+        childText.color = this.GetComponent<Button>().colors.normalColor;
         
     }
     
     public void OnHoverExit()
     {
         transform.localScale = Vector3.Lerp(hoverScale, initialScale, scaleTime  * Time.deltaTime);
-        if (childText != null) 
-        { 
-             childText.color = this.GetComponent<Button>().colors.highlightedColor;
-        }
+        childText.color = this.GetComponent<Button>().colors.highlightedColor;
     }
 }
