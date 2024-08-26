@@ -12,7 +12,7 @@ public class CameraController : MonoBehaviour
     public float minCameraSize = 5f; // Minimum camera size
     public float maxCameraSize = 10f; // Maximum camera size
     private Camera cam;
-    [SerializeField] private List<Transform> players = new List<Transform>();
+    [SerializeField] private List<Transform> playerTransforms = new List<Transform>();
 
     // Map boundaries
     private float minX, maxX, minY, maxY;
@@ -25,10 +25,10 @@ public class CameraController : MonoBehaviour
 
     void LateUpdate()
     {
-        if (players.Count == 0)
+        if (playerTransforms.Count == 0)
             return;
 
-        Vector3 centerPoint = GetCenterPoint(players);
+        Vector3 centerPoint = GetCenterPoint(playerTransforms);
         Vector3 newPosition = centerPoint;
         newPosition.z = -10f; // Set the camera z position to be behind the players
 
@@ -37,7 +37,7 @@ public class CameraController : MonoBehaviour
         newPosition.y = Mathf.Clamp(newPosition.y, minY + cam.orthographicSize, maxY - cam.orthographicSize);
 
         transform.position = newPosition;
-        cam.orthographicSize = Mathf.Clamp(GetGreatestDistance(players) / 2f + padding, minCameraSize, maxCameraSize);
+        cam.orthographicSize = Mathf.Clamp(GetGreatestDistance(playerTransforms) / 2f + padding, minCameraSize, maxCameraSize);
     }
 
     Vector3 GetCenterPoint(List<Transform> players)
@@ -69,29 +69,33 @@ public class CameraController : MonoBehaviour
 
     public void AddPlayer(Transform player)
     {
-        if (!players.Contains(player))
+        if (!playerTransforms.Contains(player))
         {
-            players.Add(player);
+            playerTransforms.Add(player);
         }
     }
 
     public void RemovePlayer(Transform player)
     {
-        if (players.Contains(player))
+        if (playerTransforms.Contains(player))
         {
-            players.Remove(player);
+            playerTransforms.Remove(player);
         }
     }
 
     public void UpdatePlayerList()
     {
-        players.Clear();
-        GameObject[] playerObjects = GameObject.FindGameObjectsWithTag("Player");
+        playerTransforms.Clear();
 
-        foreach (GameObject player in playerObjects)
+        // Find all player objects and add them to the list
+        PlayerController[] players = FindObjectsOfType<PlayerController>();
+
+        foreach (PlayerController player in players)
         {
-            players.Add(player.transform);
+            playerTransforms.Add(player.transform);
         }
+
+        Debug.Log("Player list updated in CameraController.");
     }
 
     // Set the boundaries of the current map using Tilemap

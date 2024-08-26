@@ -142,6 +142,7 @@ public class PressurePadManager : NetworkBehaviour
             if (currentStep == correctSequence.Count)
             {
                 Debug.Log("Sequence completed!");
+                SceneTransitionManager.Instance.TransitionToScene("Puzzle5");
                 // You can trigger a win condition or transition to the next phase here
             }
             return true;
