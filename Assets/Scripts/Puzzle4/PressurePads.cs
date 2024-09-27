@@ -28,7 +28,9 @@ public class PressurePads : NetworkBehaviour
         if (collision.CompareTag("Player"))
         {
             playerController = collision.GetComponent<PlayerController>();
-            if (playerController != null)
+
+            // Only show interaction text if the player is the one assigned to this pad
+            if (playerController != null && playerController.OwnerClientId == assignedPlayerId)
             {
                 interactText = playerController.interactText;
                 ShowInteractText(true);  // Show interaction text when player enters the pad
@@ -41,6 +43,8 @@ public class PressurePads : NetworkBehaviour
         if (collision.CompareTag("Player"))
         {
             PlayerController controller = collision.GetComponent<PlayerController>();
+
+            // Ensure that the interaction text is hidden only for the correct player
             if (controller == playerController)
             {
                 ShowInteractText(false);  // Hide interaction text when player leaves the pad
@@ -53,15 +57,19 @@ public class PressurePads : NetworkBehaviour
     {
         if (playerController != null && Input.GetKeyDown(KeyCode.E) && !isActivated)
         {
-            // When the player presses "E", check the sequence and interaction
-            InteractWithPadServerRpc(NetworkManager.Singleton.LocalClientId);
+            // Ensure that only the assigned player can interact with the pad
+            if (playerController.OwnerClientId == assignedPlayerId)
+            {
+                InteractWithPadServerRpc(NetworkManager.Singleton.LocalClientId);
+            }
         }
     }
 
     [ServerRpc(RequireOwnership = false)]
     private void InteractWithPadServerRpc(ulong playerId)
     {
-        if (isPartOfSequence && PressurePadManager.Instance.CheckPadSequence(padNumber))
+        // Ensure that the correct player interacts with the pad based on the assigned player
+        if (playerId == assignedPlayerId && isPartOfSequence && PressurePadManager.Instance.CheckPadSequence(padNumber))
         {
             // Correct interaction
             isActivated = true;
