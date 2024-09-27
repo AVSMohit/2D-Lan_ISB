@@ -46,11 +46,11 @@ public class LightBeam : NetworkBehaviour
                 // Check if the hit object is a target
                 if (hit.collider.CompareTag("Target"))
                 {
-                    // Call the target's OnHit method
+                    // Call the target's OnHit method via the server
                     TargetToHit target = hit.collider.GetComponent<TargetToHit>();
-                    if (target != null)
+                    if (target != null && IsServer)  // Only the server should update the target
                     {
-                        target.OnHit();
+                        target.OnHit();  // The server will propagate this change to clients
                         lastHitTarget = target;
                         targetHitThisFrame = true;
                     }

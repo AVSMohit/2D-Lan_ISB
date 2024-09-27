@@ -17,7 +17,10 @@ public class PlayerName : NetworkBehaviour
 
         if (IsOwner)
         {
+            // Get the player's name from PlayerPrefs
             string name = PlayerPrefs.GetString("PlayerName", $"Player {OwnerClientId}");
+
+            // Set the player's name on the server
             SetPlayerNameServerRpc(name);
         }
 
@@ -25,14 +28,25 @@ public class PlayerName : NetworkBehaviour
         OnPlayerNameChanged(default, playerName.Value);
     }
 
-    [ServerRpc]
-    public void SetPlayerNameServerRpc(string newName, ServerRpcParams rpcParams = default)
+    [ServerRpc(RequireOwnership = false)]
+    public void SetPlayerNameServerRpc(string name, ServerRpcParams rpcParams = default)
     {
-        playerName.Value = newName;
+        // Set this player's name on the server
+        playerName.Value = name;
+
+        // Sync the name across all clients
+        UpdatePlayerNameClientRpc(name);
+    }
+
+    [ClientRpc]
+    private void UpdatePlayerNameClientRpc(string name)
+    {
+        // Update the player name on each client
+        playerNameText.text = name;
     }
 
     private void OnPlayerNameChanged(FixedString32Bytes oldName, FixedString32Bytes newName)
     {
-        playerNameText.text = newName.ToString();
+        playerNameText.text = newName.ToString();  // Display the updated player name
     }
 }

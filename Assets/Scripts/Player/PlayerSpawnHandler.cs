@@ -7,38 +7,40 @@ public class PlayerSpawnHandler : NetworkBehaviour
 {
     private void Start()
     {
+        // Request a spawn point from the server when the player spawns
         if (IsOwner)
         {
-            StartCoroutine(WaitForSceneLoadAndPosition());
+          //  RequestSpawnPointServerRpc(NetworkManager.LocalClientId);
         }
     }
 
-    private IEnumerator WaitForSceneLoadAndPosition()
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestSpawnPointServerRpc(ulong clientId)
     {
-        // Wait until the scene has fully loaded and the SpawnManager is initialized
-        yield return new WaitUntil(() => FindObjectOfType<SpawnManager>() != null);
-
-        // Get the SpawnManager from the scene
+        Debug.Log($"Requesting spawn point for client {clientId}");
         var spawnManager = FindObjectOfType<SpawnManager>();
-
-        if (spawnManager == null)
+        if (spawnManager != null)
         {
-            Debug.LogError("SpawnManager not found in the scene!");
-            yield break;
+            Transform spawnPoint = spawnManager.GetSpawnPointForPlayer(clientId);
+            if (spawnPoint != null)
+            {
+                AssignPlayerToSpawnClientRpc(spawnPoint.position, clientId);
+            }
+            else
+            {
+                Debug.LogError("No available spawn points!");
+            }
         }
+    }
 
-        // Assign the player to the correct spawn point
-        Transform spawnPoint = spawnManager.GetSpawnPointForPlayer(NetworkManager.LocalClientId);
-
-        if (spawnPoint != null)
+    [ClientRpc]
+    private void AssignPlayerToSpawnClientRpc(Vector3 spawnPosition, ulong clientId)
+    {
+        if (NetworkManager.LocalClientId == clientId)
         {
-            // Move the player to the assigned spawn point
-            transform.position = spawnPoint.position;
-            Debug.Log($"Player {NetworkManager.LocalClientId} moved to spawn point {spawnPoint.position}");
-        }
-        else
-        {
-            Debug.LogWarning($"No spawn point found for player {NetworkManager.LocalClientId}");
+            Debug.Log($"Assigning spawn point for client {clientId}");
+            transform.position = spawnPosition;
+            Debug.Log($"Player {clientId} moved to spawn point at {spawnPosition}");
         }
     }
 }

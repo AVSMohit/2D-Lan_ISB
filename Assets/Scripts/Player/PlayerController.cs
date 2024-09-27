@@ -13,7 +13,7 @@ public class PlayerController : NetworkBehaviour
     private Vector2 moveInput;
     private bool isGrounded = true;
     public LayerMask groundLayer;
-    private bool gravityEnabled = true;
+    private bool gravityEnabled = false;
 
     public Transform groundCheck;
     public float groundCheckRadius = 0.1f;
@@ -24,10 +24,12 @@ public class PlayerController : NetworkBehaviour
 
     public float weight = 1f;
 
+    
     // Start is called before the first frame update
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        rb.gravityScale = 0;
         cameraController = FindObjectOfType<CameraController>();
         if (cameraController != null)
         {

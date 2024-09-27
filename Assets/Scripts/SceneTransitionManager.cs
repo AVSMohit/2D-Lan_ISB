@@ -3,12 +3,13 @@ using UnityEngine;
 using Unity.Netcode;
 using UnityEngine.SceneManagement;
 using System.Runtime.CompilerServices;
+using Unity.Collections;
 
 public class SceneTransitionManager : MonoBehaviour
 {
     public static SceneTransitionManager Instance;
-    public CameraController cameraController; // Reference to the CameraController script
-
+    public bool isSceneLoading = false;
+    GameManager gameManager;
     private void Awake()
     {
         if (Instance == null)
@@ -21,28 +22,58 @@ public class SceneTransitionManager : MonoBehaviour
             Destroy(gameObject);
         }
     }
-
+    private void Start()
+    {
+        gameManager = GetComponent<GameManager>();
+    }
     public void TransitionToScene(string sceneName)
     {
-        // Subscribe to the scene loaded event
-        SceneManager.sceneLoaded += OnSceneLoaded;
+        if (NetworkManager.Singleton.IsServer)  // Ensure only the server handles scene transition
+        {
+            DestroyAllPlayers();
+            // Set the flag to true to track that a scene is loading
+            isSceneLoading = true;
 
-        // Load the new scene
-        NetworkManager.Singleton.SceneManager.LoadScene(sceneName, LoadSceneMode.Single);
+            // Destroy all players before changing the scene
+
+            // Subscribe to the scene event to respawn players after the new scene is loaded
+            NetworkManager.Singleton.SceneManager.OnSceneEvent += OnSceneLoaded;
+
+            // Load the new scene across all clients
+            NetworkManager.Singleton.SceneManager.LoadScene(sceneName, LoadSceneMode.Single);
+        }
     }
 
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    private void OnSceneLoaded(SceneEvent sceneEvent)
     {
-        // Once the scene is loaded, assign players to spawn points
-        PlacePlayersAtSpawnPoints();
+        if(sceneEvent.SceneEventType == SceneEventType.LoadComplete && NetworkManager.Singleton.IsServer)
+        {
+            Debug.Log("Scene loaded, respawning players.");
 
-        // Unsubscribe from the scene loaded event
-        SceneManager.sceneLoaded -= OnSceneLoaded;
+            foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+            {
+                // Ensurei that players are respawned if they do not already exist
+                if (client.PlayerObject == null)
+                {
+                    GameManager gameManager = FindObjectOfType<GameManager>();
+                    if (gameManager != null)
+                    {
+                        gameManager.RespawnPlayer(client.ClientId);
+                    }
+                    else
+                    {
+                        Debug.LogError("GameManager not found to respawn players!");
+                    }
+                }
+            }
+
+            NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneLoaded;
+        }
     }
 
     private void PlacePlayersAtSpawnPoints()
     {
-        var spawnManager = FindObjectOfType<SpawnManager>();
+        SpawnManager spawnManager = FindObjectOfType<SpawnManager>();
 
         if (spawnManager == null)
         {
@@ -50,21 +81,22 @@ public class SceneTransitionManager : MonoBehaviour
             return;
         }
 
-        // For each player, move them to their spawn point
-        foreach (var client in NetworkManager.Singleton.ConnectedClients)
+        // Ensure all players are moved to their spawn points
+        spawnManager.AssignSpawnPoints();
+    }
+    private void DestroyAllPlayers()
+    {
+        foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
         {
-            ulong clientId = client.Key;
-            Transform spawnPoint = spawnManager.GetSpawnPointForPlayer(clientId);
-
-            if (spawnPoint != null)
+            var playerObject = client.PlayerObject;
+            if (playerObject != null)
             {
-                var playerObject = client.Value.PlayerObject;
-                playerObject.transform.position = spawnPoint.position;
-                Debug.Log($"Player {clientId} moved to spawn point {spawnPoint.position}");
-            }
-            else
-            {
-                Debug.LogWarning($"No spawn point found for player {clientId}");
+                NetworkObject networkObject = playerObject.GetComponent<NetworkObject>();
+                if (networkObject != null)
+                {
+                    networkObject.Despawn(true);  // Despawn and destroy the player object
+                    Debug.Log($"Destroyed player for client {client.ClientId}");
+                }
             }
         }
     }

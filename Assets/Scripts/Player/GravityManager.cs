@@ -5,7 +5,7 @@ using UnityEngine;
 public class GravityManager : MonoBehaviour
 {
     public bool enableGravity = true;
-    private PlayerController[] players;
+   [SerializeField] private PlayerController[] players;
 
     private void Start()
     {

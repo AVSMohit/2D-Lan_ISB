@@ -13,22 +13,31 @@ public class TargetToHit : NetworkBehaviour
         if (!isHit)
         {
             isHit = true;
-            GetComponentInChildren<SpriteRenderer>().color = activeColor;
-            GetComponent<BoxCollider2D>().isTrigger = true;
+            UpdateTargetClientRpc();  // Sync the hit event with all clients
+
+            // Logic specific to the host, like enabling puzzle completion
             GetComponent<PuzzleComplete>().enabled = true;
-            // Logic to unlock the next area or perform an action
             Debug.Log("Target hit by light beam!");
-            // Add additional logic here, e.g., opening a door, triggering an event, etc.
         }
     }
-
+    [ClientRpc]
+    private void UpdateTargetClientRpc()
+    {
+        GetComponentInChildren<SpriteRenderer>().color = activeColor;
+        GetComponent<BoxCollider2D>().isTrigger = true;
+        Debug.Log("Target hit on client!");
+    }
     public void ResetTarget()
     {
         isHit = false;
+        ResetTargetClientRpc();  // Sync the reset event with all clients
         Debug.Log("Target reset.");
+    }
+
+    [ClientRpc]
+    private void ResetTargetClientRpc()
+    {
         GetComponentInChildren<SpriteRenderer>().color = defaultColor;
         GetComponent<BoxCollider2D>().isTrigger = false;
-        GetComponent<PuzzleComplete>().enabled = false;
-        // Logic to reset the target if needed
     }
 }
