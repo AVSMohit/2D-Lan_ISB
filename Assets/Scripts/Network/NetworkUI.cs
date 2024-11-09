@@ -1,18 +1,15 @@
 using System.Collections;
 using TMPro;
-using Unity.Netcode;
-using Unity.Netcode.Transports.UTP;
+using Photon.Pun;
+using Photon.Realtime;
 using UnityEngine;
-using Unity.Services.Relay;
-using Unity.Services.Relay.Models;
-using Unity.Networking.Transport.Relay;
 using UnityEngine.UI;
 
-public class NetworkUI : MonoBehaviour
+public class NetworkUI : MonoBehaviourPunCallbacks
 {
     public InputField hostNameInputField;
     public InputField clientNameInputField;
-    public InputField joinCodeInputField;
+    public InputField joinCodeInputField; // This will act as the room name input for joining
     public Button hostButton;
     public Button clientButton;
     public TMP_Text statusText;
@@ -21,16 +18,16 @@ public class NetworkUI : MonoBehaviour
     public GameObject lobbyPanel;
     public GameManager gameManager;
 
-    private async void Start()
+    private void Start()
     {
-        await UnityServicesInitializer.InitializeUnityServices();
+        PhotonNetwork.AutomaticallySyncScene = true;
 
         // Add listeners to buttons
         hostButton.onClick.AddListener(StartHost);
         clientButton.onClick.AddListener(StartClient);
     }
 
-    private async void StartHost()
+    private void StartHost()
     {
         string playerName = hostNameInputField.text;
 
@@ -41,42 +38,23 @@ public class NetworkUI : MonoBehaviour
         }
 
         // Store the player name in PlayerPrefs
-        PlayerPrefs.SetString("PlayerName", playerName);
+        PhotonNetwork.NickName = playerName;
 
-        await UnityServicesInitializer.InitializeUnityServices();
-        try
-        {
-            var allocation = await RelayService.Instance.CreateAllocationAsync(4); // Allow up to 4 connections
-            var joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
+        // Create room options and settings
+        RoomOptions roomOptions = new RoomOptions { MaxPlayers = 4 };
 
-            statusText.text = $"Join Code: {joinCode}";
-            Debug.Log($"Join code generated: {joinCode}");
+        // Create a room with a unique name
+        string roomName = "Room_" + Random.Range(1000, 9999); // You can modify this to use more meaningful room names
+        PhotonNetwork.CreateRoom(roomName, roomOptions);
 
-            var relayServerData = new RelayServerData(allocation, "dtls");
-            NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
-
-            NetworkManager.Singleton.StartHost();
-            Debug.Log("Host started.");
-
-            lobbyManager.UpdateLobbyUI();
-            lobbyManager.DisplayRoomCode(joinCode);
-            joinPanel.SetActive(false);
-            lobbyPanel.SetActive(true);
-
-            gameManager.InitializeGameManager();
-            lobbyManager.EnableStartGameButton();
-        }
-        catch (RelayServiceException e)
-        {
-            Debug.LogError($"Relay Service Error: {e.Message}");
-            statusText.text = $"Relay Service Error: {e.Message}";
-        }
+        statusText.text = "Creating room...";
+        Debug.Log("Creating room...");
     }
 
-    private async void StartClient()
+    private void StartClient()
     {
         string playerName = clientNameInputField.text;
-        string joinCode = joinCodeInputField.text;
+        string roomName = joinCodeInputField.text; // Use as room name for joining
 
         if (string.IsNullOrEmpty(playerName))
         {
@@ -84,36 +62,58 @@ public class NetworkUI : MonoBehaviour
             return;
         }
 
-        if (string.IsNullOrEmpty(joinCode))
+        if (string.IsNullOrEmpty(roomName))
         {
-            statusText.text = "Please enter a join code.";
+            statusText.text = "Please enter a room name.";
             return;
         }
 
         // Store the player name in PlayerPrefs
-        PlayerPrefs.SetString("PlayerName", playerName);
+        PhotonNetwork.NickName = playerName;
 
-        await UnityServicesInitializer.InitializeUnityServices();
-        try
-        {
-            var joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
+        PhotonNetwork.JoinRoom(roomName);
+        statusText.text = "Joining room...";
+        Debug.Log("Joining room...");
+    }
 
-            var relayServerData = new RelayServerData(joinAllocation, "dtls");
-            NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
+    public override void OnCreatedRoom()
+    {
+        base.OnCreatedRoom();
+        statusText.text = "Room created successfully!";
+        Debug.Log("Room created successfully.");
 
-            NetworkManager.Singleton.StartClient();
-            Debug.Log("Client started.");
+        lobbyManager.UpdateLobbyUI();
+        joinPanel.SetActive(false);
+        lobbyPanel.SetActive(true);
 
-            gameManager.InitializeGameManager();
+        gameManager.InitializeGameManager();
+        lobbyManager.EnableStartGameButton();
+    }
 
-            lobbyManager.UpdateLobbyUI();
-            joinPanel.SetActive(false);
-            lobbyPanel.SetActive(true);
-        }
-        catch (RelayServiceException e)
-        {
-            Debug.LogError($"Relay Service Error: {e.Message}");
-            statusText.text = $"Relay Service Error: {e.Message}";
-        }
+    public override void OnCreateRoomFailed(short returnCode, string message)
+    {
+        base.OnCreateRoomFailed(returnCode, message);
+        statusText.text = $"Failed to create room: {message}";
+        Debug.LogError($"Failed to create room: {message}");
+    }
+
+    public override void OnJoinedRoom()
+    {
+        base.OnJoinedRoom();
+        statusText.text = "Joined room successfully!";
+        Debug.Log("Joined room successfully.");
+
+        gameManager.InitializeGameManager();
+
+        lobbyManager.UpdateLobbyUI();
+        joinPanel.SetActive(false);
+        lobbyPanel.SetActive(true);
+    }
+
+    public override void OnJoinRoomFailed(short returnCode, string message)
+    {
+        base.OnJoinRoomFailed(returnCode, message);
+        statusText.text = $"Failed to join room: {message}";
+        Debug.LogError($"Failed to join room: {message}");
     }
 }

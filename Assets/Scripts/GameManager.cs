@@ -1,54 +1,46 @@
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using Unity.Netcode;
+using Photon.Pun;
+using Photon.Realtime;
 using UnityEngine;
 
-public class GameManager : MonoBehaviour
+public class GameManager : MonoBehaviourPunCallbacks
 {
     public GameObject playerPrefab; // Assign this in the Inspector
     public TMP_Text clientStatusText; // Assign this in the Inspector
 
-
     private void Start()
     {
-      
-        if (NetworkManager.Singleton.IsServer)
+        if (PhotonNetwork.IsMasterClient)
         {
-            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
             if (clientStatusText != null)
             {
                 clientStatusText.text = "Waiting for clients...";
             }
         }
-        // Logger.Log("GameManager started.");
     }
 
-    public void OnClientConnected(ulong clientId)
+    public override void OnPlayerEnteredRoom(Player newPlayer)
     {
-        Debug.Log($"Client {clientId} connected.");
-
-        // Only spawn the player if a scene is not currently loading
-        if (!SceneTransitionManager.Instance.isSceneLoading)
+        Debug.Log($"Player {newPlayer.ActorNumber} connected.");
+        if (PhotonNetwork.IsMasterClient && !SceneTransitionManager.Instance.isSceneLoading)
         {
-            Debug.Log($"Spawning player for client {clientId}");
-           // SpawnPlayer(clientId);  // Spawn only on first connection, not during scene transitions
+            Debug.Log($"Spawning player for player {newPlayer.ActorNumber}");
+            SpawnPlayer(newPlayer.ActorNumber);
         }
     }
 
-
-    private void SpawnPlayer(ulong clientId)
+    private void SpawnPlayer(int actorNumber)
     {
-        if (!NetworkManager.Singleton.IsServer) return;
+        if (!PhotonNetwork.IsMasterClient) return;
 
         var spawnManager = FindObjectOfType<SpawnManager>();
         if (spawnManager != null)
         {
-            var spawnPosition = spawnManager.GetSpawnPointForPlayer(clientId).position;
-            var playerInstance = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
-
-            playerInstance.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId);
-            Debug.Log($"Player {clientId} spawned at {spawnPosition}");
+            var spawnPosition = spawnManager.GetSpawnPointForPlayer(actorNumber).position;
+            GameObject playerInstance = PhotonNetwork.Instantiate(playerPrefab.name, spawnPosition, Quaternion.identity);
+            Debug.Log($"Player {actorNumber} spawned at {spawnPosition}");
         }
         else
         {
@@ -56,75 +48,32 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    //private void OnEnable()
-    //{
-    //    NetworkManager.Singleton.SceneManager.OnSceneEvent += OnSceneChanged;
-    //}
-
     public void InitializeGameManager()
     {
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
+        if (PhotonNetwork.IsMasterClient)
         {
-            // Only subscribe to scene events if this is the server
-            if (NetworkManager.Singleton.IsServer)
-            {
-                NetworkManager.Singleton.SceneManager.OnSceneEvent += OnSceneChanged;
-                Debug.Log("GameManager initialized and subscribed to scene events.");
-            }
+            Debug.Log("GameManager initialized and ready.");
         }
         else
         {
-            Debug.LogError("NetworkManager or SceneManager is not initialized.");
+            Debug.LogError("This client is not the Master Client. Initialization skipped.");
         }
     }
 
     private void OnDisable()
     {
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
-        {
-            NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneChanged;
-        }
+        // Clean up any scene-specific logic if necessary
+        Debug.Log("GameManager disabled.");
     }
 
-    public void OnSceneChanged(SceneEvent sceneEvent)
-    {
-        if (sceneEvent.SceneEventType == SceneEventType.LoadComplete && NetworkManager.Singleton.IsServer)
-        {
-            Debug.Log("Scene loaded, respawning players.");
-           // isSceneLoading = false;
-
-            // Respawn players after the new scene loads
-            foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
-            {
-                if (client.PlayerObject == null) // Ensure players are only respawned if they don't already exist
-                {
-                    RespawnPlayer(client.ClientId);
-                }
-            }
-
-            // Unsubscribe from the scene loaded event to prevent multiple respawns
-            NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneChanged;
-        }
-    }
-
-    private void ReassignPlayersToSpawnPoints()
-    {
-        foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
-        {
-            SpawnPlayer(client.ClientId); // Re-spawn the player at the correct spawn point
-        }
-    }
-    public void RespawnPlayer(ulong clientId)
+    public void RespawnPlayer(int actorNumber)
     {
         var spawnManager = FindObjectOfType<SpawnManager>();
         if (spawnManager != null)
         {
-            var spawnPosition = spawnManager.GetSpawnPointForPlayer(clientId).position;
-            var playerInstance = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
-
-            // Ensure the player is spawned as a networked object
-            playerInstance.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId);
-            Debug.Log($"Respawned player {clientId} at {spawnPosition}");
+            var spawnPosition = spawnManager.GetSpawnPointForPlayer(actorNumber).position;
+            GameObject playerInstance = PhotonNetwork.Instantiate(playerPrefab.name, spawnPosition, Quaternion.identity);
+            Debug.Log($"Respawned player {actorNumber} at {spawnPosition}");
         }
         else
         {

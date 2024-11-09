@@ -1,13 +1,15 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Photon.Pun;
 
-public class PersistantCamera : MonoBehaviour
+public class PersistantCamera : MonoBehaviourPun
 {
     private static PersistantCamera instance;
 
     void Awake()
     {
+        // Check if the current instance is a remote instance in Photon PUN
         if (instance == null)
         {
             instance = this;
@@ -15,7 +17,11 @@ public class PersistantCamera : MonoBehaviour
         }
         else
         {
-            Destroy(gameObject);
+            // If the instance is not mine or already exists, destroy this duplicate
+            if (instance != this)
+            {
+                Destroy(gameObject);
+            }
         }
     }
 }

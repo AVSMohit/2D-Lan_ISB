@@ -1,9 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
-using Unity.Netcode;
+using Photon.Pun;
 using UnityEngine;
 
-public class MovingPlatform : NetworkBehaviour
+public class MovingPlatform : MonoBehaviourPun, IPunObservable
 {
     public float requiredWeight = 2f;
     public float moveSpeed = 2f;
@@ -18,11 +18,12 @@ public class MovingPlatform : NetworkBehaviour
     public Color movingColor;
 
     public SpriteRenderer[] spriteRenderers;
+
     private void Start()
     {
         startPosition = transform.position;
         lastPosition = transform.position;
-        for(int i = 0; i < spriteRenderers.Length; i++)
+        for (int i = 0; i < spriteRenderers.Length; i++)
         {
             spriteRenderers[i].color = nonMovingColor;
         }
@@ -58,14 +59,14 @@ public class MovingPlatform : NetworkBehaviour
 
     private void CheckWeight()
     {
-        if (!isMoving && currentWeight == requiredWeight)
+        if (!isMoving && currentWeight >= requiredWeight)
         {
             isMoving = true;
             for (int i = 0; i < spriteRenderers.Length; i++)
             {
                 spriteRenderers[i].color = movingColor;
             }
-            StartCoroutine(MovePlatform(targetPosition.position));
+            photonView.RPC("MovePlatformRPC", RpcTarget.All, targetPosition.position);
         }
         else if (isMoving && currentWeight < requiredWeight)
         {
@@ -78,6 +79,12 @@ public class MovingPlatform : NetworkBehaviour
         }
     }
 
+    [PunRPC]
+    private void MovePlatformRPC(Vector3 targetPos)
+    {
+        StartCoroutine(MovePlatform(targetPos));
+    }
+
     private IEnumerator MovePlatform(Vector3 targetPos)
     {
         while (Vector3.Distance(transform.position, targetPos) > 0.01f)
@@ -87,13 +94,13 @@ public class MovingPlatform : NetworkBehaviour
             UpdatePlayerPositions(movement);
             yield return null;
         }
+        isMoving = false;
     }
 
     private IEnumerator WaitAndMovePlatformDown()
     {
         yield return new WaitForSeconds(delayBeforeMovingDown);
-        StartCoroutine(MovePlatform(startPosition));
-        isMoving = false;
+        photonView.RPC("MovePlatformRPC", RpcTarget.All, startPosition);
     }
 
     private void UpdatePlayerPositions(Vector3 movement)
@@ -104,25 +111,17 @@ public class MovingPlatform : NetworkBehaviour
         }
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void ActivatePlatformMovementServerRpc(ServerRpcParams rpcParams = default)
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
     {
-        CheckWeight();
-    }
-
-    [ClientRpc]
-    private void UpdatePlatformPositionClientRpc(Vector3 position)
-    {
-        Vector3 movement = position - transform.position;
-        transform.position = position;
-        UpdatePlayerPositions(movement);
-    }
-
-    private void Update()
-    {
-        if (IsServer)
+        if (stream.IsWriting)
         {
-            UpdatePlatformPositionClientRpc(transform.position);
+            stream.SendNext(transform.position);
+            stream.SendNext(isMoving);
+        }
+        else
+        {
+            transform.position = (Vector3)stream.ReceiveNext();
+            isMoving = (bool)stream.ReceiveNext();
         }
     }
 }

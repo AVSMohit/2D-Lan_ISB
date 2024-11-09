@@ -1,52 +1,53 @@
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using Unity.Collections;
-using Unity.Netcode;
+using Photon.Pun;
+using Photon.Realtime;
 using UnityEngine;
 
-public class PlayerName : NetworkBehaviour
+public class PlayerName : MonoBehaviourPun, IPunObservable
 {
     public TMP_Text playerNameText; // TextMeshPro Text to display the player name
+    private string playerName;
 
-    public NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>();
-
-    public override void OnNetworkSpawn()
+    private void Start()
     {
-        playerName.OnValueChanged += OnPlayerNameChanged;
-
-        if (IsOwner)
+        if (photonView.IsMine)
         {
             // Get the player's name from PlayerPrefs
-            string name = PlayerPrefs.GetString("PlayerName", $"Player {OwnerClientId}");
+            playerName = PlayerPrefs.GetString("PlayerName", $"Player {PhotonNetwork.LocalPlayer.ActorNumber}");
 
-            // Set the player's name on the server
-            SetPlayerNameServerRpc(name);
+            // Set the player's name for the Photon Player
+            PhotonNetwork.LocalPlayer.NickName = playerName;
+
+            // Sync the name across all clients
+            photonView.RPC("UpdatePlayerName", RpcTarget.All, playerName);
         }
 
-        // Update the player name text immediately after spawning
-        OnPlayerNameChanged(default, playerName.Value);
+        // Display the player name at start
+        playerNameText.text = playerName;
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    public void SetPlayerNameServerRpc(string name, ServerRpcParams rpcParams = default)
+    [PunRPC]
+    private void UpdatePlayerName(string name)
     {
-        // Set this player's name on the server
-        playerName.Value = name;
-
-        // Sync the name across all clients
-        UpdatePlayerNameClientRpc(name);
-    }
-
-    [ClientRpc]
-    private void UpdatePlayerNameClientRpc(string name)
-    {
-        // Update the player name on each client
+        playerName = name;
         playerNameText.text = name;
     }
 
-    private void OnPlayerNameChanged(FixedString32Bytes oldName, FixedString32Bytes newName)
+    // IPunObservable interface implementation for custom synchronization (optional)
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
     {
-        playerNameText.text = newName.ToString();  // Display the updated player name
+        if (stream.IsWriting)
+        {
+            // Send the player name to other clients
+            stream.SendNext(playerName);
+        }
+        else
+        {
+            // Receive the player name from other clients
+            playerName = (string)stream.ReceiveNext();
+            playerNameText.text = playerName;
+        }
     }
 }

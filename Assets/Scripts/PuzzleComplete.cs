@@ -1,24 +1,23 @@
 using System.Collections;
 using System.Collections.Generic;
-using Unity.Multiplayer.Samples.Utilities.ClientAuthority;
-using Unity.Netcode;
+using Photon.Pun;
+using Photon.Realtime;
 using UnityEngine;
 
-public class PuzzleComplete : NetworkBehaviour
+public class PuzzleComplete : MonoBehaviourPun
 {
-    HashSet<ulong> playersInTrigger= new HashSet<ulong>();
-
-    public string nextScceneName;
+    private HashSet<int> playersInTrigger = new HashSet<int>();
+    public string nextSceneName;
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (collision.CompareTag("Player"))
         {
-            var player = collision.gameObject.GetComponent<ClientNetworkTransform>();
-            if (player != null) 
+            PhotonView playerPhotonView = collision.gameObject.GetComponent<PhotonView>();
+            if (playerPhotonView != null && playerPhotonView.IsMine)
             {
-                playersInTrigger.Add(player.OwnerClientId);
-                CheckAllPlayersInTrigger();   
+                playersInTrigger.Add(playerPhotonView.OwnerActorNr);
+                CheckAllPlayersInTrigger();
             }
         }
     }
@@ -27,28 +26,28 @@ public class PuzzleComplete : NetworkBehaviour
     {
         if (collision.CompareTag("Player"))
         {
-            var player = collision.gameObject.GetComponent<ClientNetworkTransform>();
-            if (player != null)
+            PhotonView playerPhotonView = collision.gameObject.GetComponent<PhotonView>();
+            if (playerPhotonView != null && playerPhotonView.IsMine)
             {
-                playersInTrigger.Remove(player.OwnerClientId);
-                
+                playersInTrigger.Remove(playerPhotonView.OwnerActorNr);
             }
         }
     }
 
     void CheckAllPlayersInTrigger()
     {
-        if (playersInTrigger.Count == NetworkManager.Singleton.ConnectedClientsIds.Count)
+        if (playersInTrigger.Count == PhotonNetwork.PlayerList.Length)
         {
-            TriggerSceneTransitionServerRpc();
+            photonView.RPC("TriggerSceneTransition", RpcTarget.MasterClient);
         }
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void TriggerSceneTransitionServerRpc(ServerRpcParams rpcParams = default)
+    [PunRPC]
+    private void TriggerSceneTransition()
     {
-        SceneTransitionManager.Instance.TransitionToScene(nextScceneName);  // Replace "NextScene" with your target scene name
+        if (PhotonNetwork.IsMasterClient)
+        {
+            PhotonNetwork.LoadLevel(nextSceneName);
+        }
     }
-
-
 }

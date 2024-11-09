@@ -1,14 +1,12 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using Unity.Collections;
-using UnityEngine.SceneManagement;
+using Photon.Pun;
+using Photon.Realtime;
 
-public class LobbyManager : NetworkBehaviour
+public class LobbyManager : MonoBehaviourPunCallbacks
 {
     public TMP_Text[] playerTexts; // Array to hold player Text UI elements
     public Button startGameButton;
@@ -16,26 +14,17 @@ public class LobbyManager : NetworkBehaviour
     public GameObject joinPanel;
     public GameObject lobbyPanel;
 
-    private NetworkList<FixedString32Bytes> playerNames;
-
-    private void Awake()
-    {
-        playerNames = new NetworkList<FixedString32Bytes>();
-    }
+    private List<string> playerNames = new List<string>();
 
     private void Start()
     {
-        NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
-        NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
-
-        playerNames.OnListChanged += OnPlayerNamesChanged;
-
+        PhotonNetwork.AutomaticallySyncScene = true;
         UpdateLobbyUI();
     }
 
     public void EnableStartGameButton()
     {
-        if (NetworkManager.Singleton.IsHost)
+        if (PhotonNetwork.IsMasterClient)
         {
             Debug.Log("Enabling Start Game button for host.");
             startGameButton.gameObject.SetActive(true);
@@ -45,67 +34,32 @@ public class LobbyManager : NetworkBehaviour
         }
     }
 
-    private void OnClientConnected(ulong clientId)
+    public override void OnPlayerEnteredRoom(Player newPlayer)
     {
-        Debug.Log($"Client {clientId} connected.");
-        if (NetworkManager.Singleton.IsHost)
-        {
-            Debug.Log("Host detected OnClientConnected.");
-            NotifyClientToSetNameClientRpc(clientId);
-        }
-
+        Debug.Log($"Player {newPlayer.NickName} connected.");
         UpdateLobbyUI();
         SwitchToLobbyPanel();
     }
 
-    [ClientRpc]
-    private void NotifyClientToSetNameClientRpc(ulong clientId, ClientRpcParams clientRpcParams = default)
+    public override void OnPlayerLeftRoom(Player otherPlayer)
     {
-        if (NetworkManager.Singleton.LocalClientId == clientId)
-        {
-            string playerName = PlayerPrefs.GetString("PlayerName", $"Player {clientId}");
-            SetPlayerNameServerRpc(playerName);
-        }
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    private void SetPlayerNameServerRpc(string playerName, ServerRpcParams rpcParams = default)
-    {
-        playerNames.Add(playerName);
-    }
-
-    private void OnClientDisconnected(ulong clientId)
-    {
-        Debug.Log($"Client {clientId} disconnected.");
-        if (NetworkManager.Singleton.IsHost)
-        {
-            RemovePlayerNameServerRpc(clientId);
-        }
-
+        Debug.Log($"Player {otherPlayer.NickName} disconnected.");
         UpdateLobbyUI();
-    }
-
-    private void OnPlayerNamesChanged(NetworkListEvent<FixedString32Bytes> changeEvent)
-    {
-        UpdateLobbyUI();
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    private void RemovePlayerNameServerRpc(ulong clientId, ServerRpcParams rpcParams = default)
-    {
-        if ((int)clientId < playerNames.Count)
-        {
-            playerNames.RemoveAt((int)clientId);
-        }
     }
 
     public void UpdateLobbyUI()
     {
+        playerNames.Clear();
+        foreach (Player player in PhotonNetwork.PlayerList)
+        {
+            playerNames.Add(player.NickName);
+        }
+
         for (int i = 0; i < playerTexts.Length; i++)
         {
             if (i < playerNames.Count)
             {
-                playerTexts[i].text = playerNames[i].ToString();
+                playerTexts[i].text = playerNames[i];
             }
             else
             {
@@ -121,10 +75,10 @@ public class LobbyManager : NetworkBehaviour
 
     private void OnStartGameClicked()
     {
-        if (NetworkManager.Singleton.IsHost)
+        if (PhotonNetwork.IsMasterClient)
         {
             Debug.Log("Start Game clicked. Loading GameScene.");
-            SceneTransitionManager.Instance.TransitionToScene("SplitPath");
+            PhotonNetwork.LoadLevel("SplitPath");
         }
         else
         {

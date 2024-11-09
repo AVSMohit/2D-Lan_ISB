@@ -1,9 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Unity.Collections;
-using Unity.Netcode;
 using UnityEngine;
+using Photon.Pun;
+using Photon.Realtime;
 using UnityEngine.Tilemaps;
 
 public class CameraController : MonoBehaviour
@@ -87,12 +87,13 @@ public class CameraController : MonoBehaviour
     {
         playerTransforms.Clear();
 
-        // Find all player objects and add them to the list
-        PlayerController[] players = FindObjectsOfType<PlayerController>();
-
-        foreach (PlayerController player in players)
+        // Find all player objects controlled by Photon
+        foreach (PhotonView photonView in FindObjectsOfType<PhotonView>())
         {
-            playerTransforms.Add(player.transform);
+            if (photonView.IsMine || photonView.IsRoomView)
+            {
+                playerTransforms.Add(photonView.transform);
+            }
         }
 
         Debug.Log("Player list updated in CameraController.");

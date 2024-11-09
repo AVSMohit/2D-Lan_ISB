@@ -1,15 +1,14 @@
 using System.Collections;
 using UnityEngine;
-using Unity.Netcode;
+using Photon.Pun;
 using UnityEngine.SceneManagement;
-using System.Runtime.CompilerServices;
-using Unity.Collections;
 
-public class SceneTransitionManager : MonoBehaviour
+public class SceneTransitionManager : MonoBehaviourPunCallbacks
 {
     public static SceneTransitionManager Instance;
     public bool isSceneLoading = false;
-    GameManager gameManager;
+    private GameManager gameManager;
+
     private void Awake()
     {
         if (Instance == null)
@@ -22,53 +21,28 @@ public class SceneTransitionManager : MonoBehaviour
             Destroy(gameObject);
         }
     }
+
     private void Start()
     {
         gameManager = GetComponent<GameManager>();
     }
+
     public void TransitionToScene(string sceneName)
     {
-        if (NetworkManager.Singleton.IsServer)  // Ensure only the server handles scene transition
+        if (PhotonNetwork.IsMasterClient)  // Ensure only the master client handles scene transition
         {
             DestroyAllPlayers();
-            // Set the flag to true to track that a scene is loading
             isSceneLoading = true;
 
-            // Destroy all players before changing the scene
-
-            // Subscribe to the scene event to respawn players after the new scene is loaded
-            NetworkManager.Singleton.SceneManager.OnSceneEvent += OnSceneLoaded;
-
-            // Load the new scene across all clients
-            NetworkManager.Singleton.SceneManager.LoadScene(sceneName, LoadSceneMode.Single);
+            // Load the scene for all clients
+            PhotonNetwork.LoadLevel(sceneName);
         }
     }
 
-    private void OnSceneLoaded(SceneEvent sceneEvent)
+    public override void OnJoinedRoom()
     {
-        if(sceneEvent.SceneEventType == SceneEventType.LoadComplete && NetworkManager.Singleton.IsServer)
-        {
-            Debug.Log("Scene loaded, respawning players.");
-
-            foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
-            {
-                // Ensurei that players are respawned if they do not already exist
-                if (client.PlayerObject == null)
-                {
-                    GameManager gameManager = FindObjectOfType<GameManager>();
-                    if (gameManager != null)
-                    {
-                        gameManager.RespawnPlayer(client.ClientId);
-                    }
-                    else
-                    {
-                        Debug.LogError("GameManager not found to respawn players!");
-                    }
-                }
-            }
-
-            NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneLoaded;
-        }
+        // Place players at their spawn points when they join a new room or after a scene transition
+        PlacePlayersAtSpawnPoints();
     }
 
     private void PlacePlayersAtSpawnPoints()
@@ -84,19 +58,16 @@ public class SceneTransitionManager : MonoBehaviour
         // Ensure all players are moved to their spawn points
         spawnManager.AssignSpawnPoints();
     }
+
     private void DestroyAllPlayers()
     {
-        foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+        foreach (GameObject playerObject in GameObject.FindGameObjectsWithTag("Player"))
         {
-            var playerObject = client.PlayerObject;
-            if (playerObject != null)
+            PhotonView photonView = playerObject.GetComponent<PhotonView>();
+            if (photonView != null && photonView.IsMine)
             {
-                NetworkObject networkObject = playerObject.GetComponent<NetworkObject>();
-                if (networkObject != null)
-                {
-                    networkObject.Despawn(true);  // Despawn and destroy the player object
-                    Debug.Log($"Destroyed player for client {client.ClientId}");
-                }
+                PhotonNetwork.Destroy(playerObject);  // Destroy the player object
+                Debug.Log($"Destroyed player with ID {photonView.OwnerActorNr}");
             }
         }
     }

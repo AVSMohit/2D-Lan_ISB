@@ -1,13 +1,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using TMPro;
-using Unity.Netcode;
+using Photon.Pun;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class ChatManager : NetworkBehaviour
+public class ChatManager : MonoBehaviourPun
 {
     public InputField chatInputField; // TextMeshPro InputField
     public Button sendButton; // Unity UI Button
@@ -27,7 +26,7 @@ public class ChatManager : NetworkBehaviour
             string message = chatInputField.text;
             chatInputField.text = "";
             chatInputField.ActivateInputField();
-            SendMessageToServerRpc(message);
+            photonView.RPC("SendMessageToClients", RpcTarget.All, message, PhotonNetwork.NickName);
         }
     }
 
@@ -37,45 +36,22 @@ public class ChatManager : NetworkBehaviour
         {
             chatInputField.text = "";
             chatInputField.ActivateInputField();
-            SendMessageToServerRpc(message);
+            photonView.RPC("SendMessageToClients", RpcTarget.All, message, PhotonNetwork.NickName);
         }
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void SendMessageToServerRpc(string message, ServerRpcParams rpcParams = default)
+    [PunRPC]
+    private void SendMessageToClients(string message, string senderName)
     {
-        ulong senderId = rpcParams.Receive.SenderClientId;
-        string senderName = GetPlayerName(senderId);
         string formattedMessage = $"{senderName}: {message}";
-        ReceiveMessageOnClientRpc(formattedMessage);
-    }
-
-    private string GetPlayerName(ulong clientId)
-    {
-        if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
-        {
-            var playerNameScript = client.PlayerObject.GetComponent<PlayerName>();
-            return playerNameScript != null ? playerNameScript.playerNameText.text : $"Player {clientId}";
-        }
-        return $"Player {clientId}";
-    }
-
-    [ClientRpc]
-    private void ReceiveMessageOnClientRpc(string message, ClientRpcParams rpcParams = default)
-    {
-        chatDisplayText.text += message + "\n";
+        chatDisplayText.text += formattedMessage + "\n";
         Canvas.ForceUpdateCanvases();
         chatScrollRect.verticalNormalizedPosition = 0f;
         Canvas.ForceUpdateCanvases();
     }
 
-    private string GetDebuggerDisplay()
-    {
-        return ToString();
-    }
-
     private void Update()
     {
-        
+        // Any additional updates as needed
     }
 }

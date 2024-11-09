@@ -1,67 +1,64 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Unity.Netcode;
-using System.Linq;
+using Photon.Pun;
+using Photon.Realtime;
 
-public class SpawnManager : NetworkBehaviour
+public class SpawnManager : MonoBehaviourPunCallbacks
 {
     public Transform[] spawnPoints; // Array of spawn points in the scene
-    private Dictionary<ulong, Transform> playerSpawnPoints = new Dictionary<ulong, Transform>();
+    private Dictionary<int, Transform> playerSpawnPoints = new Dictionary<int, Transform>();
 
     private void Start()
     {
-        // Ensure this script is executed after all players have joined and the scene has loaded
-        if (IsServer)
+        if (PhotonNetwork.IsMasterClient)
         {
             AssignSpawnPoints();
-
-            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
         }
     }
-    private void OnClientConnected(ulong clientId)
+
+    public override void OnPlayerEnteredRoom(Player newPlayer)
     {
-        // Assign a spawn point to the new client
-        MovePlayerToSpawnPoint(clientId);
+        // Assign a spawn point when a new player joins the room
+        MovePlayerToSpawnPoint(newPlayer.ActorNumber);
     }
 
     // Assign spawn points to all connected players
     public void AssignSpawnPoints()
     {
-        ulong[] clientIds = NetworkManager.Singleton.ConnectedClientsIds.ToArray();
+        Player[] players = PhotonNetwork.PlayerList;
 
-        for (int i = 0; i < clientIds.Length && i < spawnPoints.Length; i++)
+        for (int i = 0; i < players.Length && i < spawnPoints.Length; i++)
         {
-            playerSpawnPoints[clientIds[i]] = spawnPoints[i];
-            MovePlayerToSpawnPoint(clientIds[i]);
+            playerSpawnPoints[players[i].ActorNumber] = spawnPoints[i];
+            MovePlayerToSpawnPoint(players[i].ActorNumber);
         }
     }
-    public Transform GetSpawnPointForPlayer(ulong clientId)
+
+    public Transform GetSpawnPointForPlayer(int actorNumber)
     {
-        if (!playerSpawnPoints.ContainsKey(clientId))
+        if (!playerSpawnPoints.ContainsKey(actorNumber))
         {
             // Assign a new spawn point based on the available points
-            int index = (int)(clientId % (ulong)spawnPoints.Length);
-            playerSpawnPoints[clientId] = spawnPoints[index];
+            int index = actorNumber % spawnPoints.Length;
+            playerSpawnPoints[actorNumber] = spawnPoints[index];
         }
 
-        return playerSpawnPoints[clientId];
+        return playerSpawnPoints[actorNumber];
     }
 
     // Move the player to the assigned spawn point
-    private void MovePlayerToSpawnPoint(ulong clientId)
+    private void MovePlayerToSpawnPoint(int actorNumber)
     {
-        if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
+        GameObject playerObject = PhotonView.Find(actorNumber)?.gameObject;
+        if (playerObject != null)
         {
-            if (client.PlayerObject != null)
-            {
-                Transform spawnPoint = playerSpawnPoints[clientId];
-                client.PlayerObject.transform.position = spawnPoint.position;
-                Debug.Log($"Player {clientId} moved to spawn point {spawnPoint.position}");
-            }
-            else
-            {
-                Debug.LogWarning($"Player object for client {clientId} not found!");
-            }
+            Transform spawnPoint = playerSpawnPoints[actorNumber];
+            playerObject.transform.position = spawnPoint.position;
+            Debug.Log($"Player {actorNumber} moved to spawn point {spawnPoint.position}");
+        }
+        else
+        {
+            Debug.LogWarning($"Player object for actor number {actorNumber} not found!");
         }
     }
 }

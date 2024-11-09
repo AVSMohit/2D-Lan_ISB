@@ -1,39 +1,36 @@
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
+using Photon.Pun;
+using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.Analytics;
-using TMPro;
 using UnityEngine.SceneManagement;
-using Unity.Netcode;
-using Unity.Collections;
 
-public class GlobaGameManager : NetworkBehaviour
+public class GlobaGameManager : MonoBehaviourPunCallbacks, IPunObservable
 {
-    public static GlobaGameManager Instance {  get; private set; }
+    public static GlobaGameManager Instance { get; private set; }
 
     float totalGameTime = 30f * 60f;
-    NetworkVariable<float> remainingTime = new NetworkVariable<float>(0f);
+    private float remainingTime;
+    private int score = 10000;
+    private int resetCount = 0;
 
-    NetworkVariable<int> score = new NetworkVariable<int>(10000);  // Changed to NetworkVariable
-
-    int resetCount = 0;
-
-    bool gameStarted = false;
-    bool isPaused = true;
-
+    private bool gameStarted = false;
+    private bool isPaused = true;
 
     public TMP_Text timerText;
     public TMP_Text resetCountText;
     public TMP_Text scoreText;
 
-    Dictionary<ulong,string>playerNames = new Dictionary<ulong,string>();
-    string lobbyNumber = "Lobby_1";
+    private Dictionary<int, string> playerNames = new Dictionary<int, string>();
+    private string lobbyNumber = "Lobby_1";
 
     public Canvas gameCanvas;
 
     private void Awake()
     {
-        if(Instance == null)
+        if (Instance == null)
         {
             Instance = this;
             DontDestroyOnLoad(gameObject);
@@ -43,32 +40,26 @@ public class GlobaGameManager : NetworkBehaviour
             Destroy(gameObject);
         }
     }
-    // Start is called before the first frame update
-    void Start()
-    {
-        if (IsServer)
-        {
-            remainingTime.Value = totalGameTime;
-        }
 
-        // Register callbacks for the NetworkVariables to update clients when the values change
-        remainingTime.OnValueChanged += (oldValue, newValue) => UpdateTimerText();
-        score.OnValueChanged += (oldValue, newValue) => UpdateScoreText();
+    private void Start()
+    {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            remainingTime = totalGameTime;
+        }
 
         UpdateTimerText();
         UpdateScoreText();
     }
+
     private void InitializeUIComponents()
     {
-
         if (gameCanvas == null)
         {
-            // Try to find the Canvas if not assigned in the Inspector
             gameCanvas = GetComponentInChildren<Canvas>();
         }
         if (timerText == null)
         {
-            // Try to find the timerText if not assigned in the Inspector
             timerText = gameCanvas.transform.GetChild(0).GetComponentInChildren<TextMeshProUGUI>();
         }
 
@@ -78,22 +69,17 @@ public class GlobaGameManager : NetworkBehaviour
         }
     }
 
-
-
-    // Update is called once per frame
-    void Update()
+    private void Update()
     {
-
         UpdateTimerText();
-        if (IsServer && !isPaused)
+        if (PhotonNetwork.IsMasterClient && !isPaused)
         {
-
-            if(gameStarted)
+            if (gameStarted)
             {
-                remainingTime.Value -=  Time.deltaTime;
+                remainingTime -= Time.deltaTime;
                 UpdateScoreBasedOnTime();
 
-                if(remainingTime.Value <= 0)
+                if (remainingTime <= 0)
                 {
                     EndGame();
                 }
@@ -101,86 +87,91 @@ public class GlobaGameManager : NetworkBehaviour
 
             if (Input.GetKeyDown(KeyCode.R))
             {
-                RestartSceneServerRpc();
+                photonView.RPC("RestartScene", RpcTarget.All);
             }
         }
     }
 
-    void UpdateScoreBasedOnTime()
+    private void UpdateScoreBasedOnTime()
     {
-        score.Value  = Mathf.Max(0,(int) (10000 * (remainingTime.Value/totalGameTime)));
-        //scoreText.text = ($"Score : " + score.ToString());
-    }
-    void UpdateScoreText()
-    {
-        scoreText.text = "Score: " + score.Value.ToString();
-    }
-    void UpdateTimerText()
-    {
-        int minutes = Mathf.FloorToInt(remainingTime.Value / 60);
-        int seconds  = Mathf.FloorToInt(remainingTime.Value % 60);
-
-        timerText.text = ("Time : "  + string.Format("{0:00}:{1:00}",minutes,seconds));
+        score = Mathf.Max(0, (int)(10000 * (remainingTime / totalGameTime)));
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    void RestartSceneServerRpc()
+    private void UpdateScoreText()
+    {
+        if (scoreText != null)
+        {
+            scoreText.text = "Score: " + score.ToString();
+        }
+    }
+
+    private void UpdateTimerText()
+    {
+        int minutes = Mathf.FloorToInt(remainingTime / 60);
+        int seconds = Mathf.FloorToInt(remainingTime % 60);
+
+        if (timerText != null)
+        {
+            timerText.text = "Time : " + string.Format("{0:00}:{1:00}", minutes, seconds);
+        }
+    }
+
+    [PunRPC]
+    private void RestartScene()
     {
         resetCount++;
-        RestartSceneClientRpc();
-    }
-
-    [ClientRpc]
-
-    void RestartSceneClientRpc()
-    {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);  // Restart the current scene
-        PauseTimer();  // Pause the timer on scene reload
-        InitializeUIComponents();  // Reinitialize UI components after scene load
-
-        // Automatically resume the timer and gameplay after the scene loads
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        PauseTimer();
+        InitializeUIComponents();
         StartCoroutine(ResumeGameAfterSceneLoad());
     }
 
     public void StartGame()
     {
-        if (IsServer)
+        if (PhotonNetwork.IsMasterClient)
         {
-            remainingTime.Value = totalGameTime;  // Initialize the timer with total game time
+            remainingTime = totalGameTime;
         }
 
         gameStarted = true;
-        isPaused = false;  // Start the timer and scoring
+        isPaused = false;
         UpdateTimerText();
         Debug.Log("Game started.");
     }
+
     private IEnumerator ResumeGameAfterSceneLoad()
     {
-        yield return new WaitForSeconds(1f);  // Give the scene time to load
-        ResumeTimer();  // Resume the timer and gameplay
+        yield return new WaitForSeconds(1f);
+        ResumeTimer();
     }
+
     public void PauseTimer()
     {
         isPaused = true;
-        gameCanvas.gameObject.SetActive(false);
-        Debug.Log(gameStarted);
-        Debug.Log(isPaused);
+        if (gameCanvas != null)
+        {
+            gameCanvas.gameObject.SetActive(false);
+        }
     }
 
     public void ResumeTimer()
     {
         if (!gameStarted)
         {
-            StartGame();  // Ensure the game starts properly if not already started
+            StartGame();
         }
 
         if (gameStarted)
         {
-            isPaused = false;  // Resume the timer only if the game has started
-            UpdateTimerText();  // Update the timer to reflect the current time
+            isPaused = false;
+            UpdateTimerText();
         }
 
-        gameCanvas.gameObject.SetActive(true);
+        if (gameCanvas != null)
+        {
+            gameCanvas.gameObject.SetActive(true);
+        }
+
         Debug.Log("Game resumed.");
     }
 
@@ -188,36 +179,41 @@ public class GlobaGameManager : NetworkBehaviour
     {
         gameStarted = false;
 
-        // Collect player data
-        foreach (var player in NetworkManager.Singleton.ConnectedClients)
+        foreach (Player player in PhotonNetwork.PlayerList)
         {
-            if (player.Value != null && player.Value.PlayerObject != null)
+            if (player.CustomProperties.TryGetValue("PlayerName", out object playerName))
             {
-                if (player.Value.PlayerObject.TryGetComponent(out PlayerName playerNameComponent))
-                {
-                    playerNames[player.Key] = playerNameComponent.playerName.Value.ToString();
-                }
-                else
-                {
-                    Debug.LogWarning($"PlayerName component not found on player {player.Key}");
-                }
-            }
-            else
-            {
-                Debug.LogWarning($"PlayerObject not found for player {player.Key}");
+                playerNames[player.ActorNumber] = playerName.ToString();
             }
         }
 
-        // Send data to Unity Analytics
         Analytics.CustomEvent("Game_End", new Dictionary<string, object>
         {
             { "lobbyNumber", lobbyNumber },
-            { "remainingTime", remainingTime.Value },
+            { "remainingTime", remainingTime },
             { "finalScore", score },
             { "resetCount", resetCount },
             { "players", string.Join(", ", playerNames.Values) }
         });
 
         Debug.Log("Game has ended. Data sent to Unity Analytics.");
+    }
+
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+    {
+        if (stream.IsWriting)
+        {
+            stream.SendNext(remainingTime);
+            stream.SendNext(score);
+            stream.SendNext(gameStarted);
+            stream.SendNext(isPaused);
+        }
+        else
+        {
+            remainingTime = (float)stream.ReceiveNext();
+            score = (int)stream.ReceiveNext();
+            gameStarted = (bool)stream.ReceiveNext();
+            isPaused = (bool)stream.ReceiveNext();
+        }
     }
 }

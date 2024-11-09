@@ -1,11 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
-using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using Photon.Pun;
 using TMPro;
-using System.Security.Cryptography;
-public class PlayerController : NetworkBehaviour
+
+public class PlayerController : MonoBehaviourPun
 {
     public float moveSpeed;
     public float jumpForce = 5f;
@@ -18,48 +17,51 @@ public class PlayerController : NetworkBehaviour
     public Transform groundCheck;
     public float groundCheckRadius = 0.1f;
 
-    CameraController cameraController;
+    private CameraController cameraController;
 
     public TMP_Text interactText;
 
     public float weight = 1f;
 
-    
-    // Start is called before the first frame update
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         rb.gravityScale = 0;
-        cameraController = FindObjectOfType<CameraController>();
-        if (cameraController != null)
+
+        if (photonView.IsMine)
         {
-            cameraController.AddPlayer(transform);
+            cameraController = FindObjectOfType<CameraController>();
+            if (cameraController != null)
+            {
+                cameraController.AddPlayer(transform);
+            }
         }
     }
 
     private void OnEnable()
     {
-        gameObject.tag = "Player";
+        if (photonView.IsMine)
+        {
+            gameObject.tag = "Player";
+        }
     }
 
     private void OnDisable()
     {
-        if (cameraController != null)
+        if (photonView.IsMine && cameraController != null)
         {
             cameraController.RemovePlayer(transform);
         }
     }
 
-    // Update is called once per frame
     void Update()
     {
-        if (!IsOwner) return;
+        if (!photonView.IsMine) return;
 
         moveInput.x = Input.GetAxis("Horizontal");
 
         if (gravityEnabled)
         {
-            // Handle jumping only when gravity is enabled
             if (Input.GetButtonDown("Jump") && isGrounded)
             {
                 Jump();
@@ -67,18 +69,16 @@ public class PlayerController : NetworkBehaviour
         }
         else
         {
-            // Allow vertical movement when gravity is disabled
             moveInput.y = Input.GetAxis("Vertical");
         }
     }
 
     private void FixedUpdate()
     {
-        if (IsOwner)
+        if (photonView.IsMine)
         {
             if (gravityEnabled)
             {
-                // Apply gravity and horizontal movement when gravity is enabled
                 rb.velocity = new Vector2(moveInput.x * moveSpeed, rb.velocity.y);
 
                 // Check if grounded
@@ -86,11 +86,9 @@ public class PlayerController : NetworkBehaviour
             }
             else
             {
-                // Allow free movement when gravity is disabled
                 rb.velocity = moveInput * moveSpeed;
             }
 
-            // Apply gravity scale
             rb.gravityScale = gravityEnabled ? 1 : 0;
         }
     }

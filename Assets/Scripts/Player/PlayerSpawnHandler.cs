@@ -1,30 +1,28 @@
 using System.Collections;
 using UnityEngine;
-using Unity.Netcode;
-using UnityEngine.SceneManagement;
+using Photon.Pun;
 
-public class PlayerSpawnHandler : NetworkBehaviour
+public class PlayerSpawnHandler : MonoBehaviourPun
 {
     private void Start()
     {
-        // Request a spawn point from the server when the player spawns
-        if (IsOwner)
+        // Request a spawn point for the local player when the object is owned by them
+        if (photonView.IsMine)
         {
-          //  RequestSpawnPointServerRpc(NetworkManager.LocalClientId);
+            RequestSpawnPoint();
         }
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void RequestSpawnPointServerRpc(ulong clientId)
+    private void RequestSpawnPoint()
     {
-        Debug.Log($"Requesting spawn point for client {clientId}");
+        Debug.Log($"Requesting spawn point for player {PhotonNetwork.LocalPlayer.ActorNumber}");
         var spawnManager = FindObjectOfType<SpawnManager>();
         if (spawnManager != null)
         {
-            Transform spawnPoint = spawnManager.GetSpawnPointForPlayer(clientId);
+            Transform spawnPoint = spawnManager.GetSpawnPointForPlayer(PhotonNetwork.LocalPlayer.ActorNumber);
             if (spawnPoint != null)
             {
-                AssignPlayerToSpawnClientRpc(spawnPoint.position, clientId);
+                photonView.RPC("AssignPlayerToSpawn", RpcTarget.All, spawnPoint.position, PhotonNetwork.LocalPlayer.ActorNumber);
             }
             else
             {
@@ -33,15 +31,14 @@ public class PlayerSpawnHandler : NetworkBehaviour
         }
     }
 
-    [ClientRpc]
-    private void AssignPlayerToSpawnClientRpc(Vector3 spawnPosition, ulong clientId)
+    [PunRPC]
+    private void AssignPlayerToSpawn(Vector3 spawnPosition, int actorNumber)
     {
-        if (NetworkManager.LocalClientId == clientId)
+        if (PhotonNetwork.LocalPlayer.ActorNumber == actorNumber)
         {
-            Debug.Log($"Assigning spawn point for client {clientId}");
+            Debug.Log($"Assigning spawn point for player {actorNumber}");
             transform.position = spawnPosition;
-            Debug.Log($"Player {clientId} moved to spawn point at {spawnPosition}");
+            Debug.Log($"Player {actorNumber} moved to spawn point at {spawnPosition}");
         }
     }
 }
-
