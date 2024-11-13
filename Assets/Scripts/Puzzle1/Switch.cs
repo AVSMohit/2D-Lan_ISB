@@ -1,3 +1,4 @@
+using Photon.Pun;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
@@ -28,7 +29,7 @@ public class Switch : NetworkBehaviour
         if (collision.CompareTag("Player"))
         {
             PlayerController controller = collision.GetComponent<PlayerController>();
-            if (controller != null && (!mainDoorSwitch || controller.OwnerClientId == playerID))
+            if (controller != null && (!mainDoorSwitch || controller.photonView.OwnerActorNr == PhotonNetwork.LocalPlayer.ActorNumber))
             {
                 playerController = controller;
                 controller.interactText.gameObject.SetActive(true);
@@ -55,7 +56,7 @@ public class Switch : NetworkBehaviour
     {
         if (playerInRange && !isActivated && Input.GetKeyDown(KeyCode.E))
         {
-            Debug.Log("Player " + playerController.OwnerClientId + " is activating the switch.");
+            Debug.Log("Player " + playerController.photonView.OwnerActorNr + " is activating the switch.");
             ActivateObjectServerRpc(NetworkManager.Singleton.LocalClientId);
         }
     }

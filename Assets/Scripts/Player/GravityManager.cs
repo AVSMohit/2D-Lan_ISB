@@ -10,7 +10,14 @@ public class GravityManager : MonoBehaviourPun
 
     private void Start()
     {
-        UpdatePlayerGravity();
+        if (PhotonNetwork.IsConnected || PhotonNetwork.OfflineMode)
+        {
+            UpdatePlayerGravity();
+        }
+        else
+        {
+            Debug.LogWarning("Photon is not connected. Gravity changes will not be synced.");
+        }
     }
 
     public void UpdatePlayerGravity()
@@ -21,8 +28,11 @@ public class GravityManager : MonoBehaviourPun
             player.SetGravity(enableGravity);
         }
 
-        // Broadcast gravity state to all clients
-        photonView.RPC("SyncGravityState", RpcTarget.Others, enableGravity);
+        // Only send the RPC if connected to Photon
+        if (PhotonNetwork.IsConnected)
+        {
+            photonView.RPC("SyncGravityState", RpcTarget.Others, enableGravity);
+        }
     }
 
     [PunRPC]

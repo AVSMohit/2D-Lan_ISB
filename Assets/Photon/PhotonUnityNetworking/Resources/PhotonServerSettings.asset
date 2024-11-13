@@ -42,6 +42,25 @@ MonoBehaviour:
   - SendMessageToClients
   - BroadcastLogMessage
   - SyncGravityState
+  - ActivatePad
+  - AssignPlayerToSpawn
+  - CloseDoor
+  - EnableHighlightAndArrowRPC
+  - MovePlatformRPC
+  - OpenDoor
+  - ResetPads
+  - ResetTargetRPC
+  - RestartScene
+  - RotateDoor
+  - RotateMirrorRPC
+  - SendInstructionsToClients
+  - ShowWrongInteraction
+  - TriggerSceneTransition
+  - UpdateGateState
+  - UpdateLightBeamRPC
+  - UpdatePlayerName
+  - UpdateTargetRPC
+  - UpdateVisuals
   DisableAutoOpenWizard: 1
   ShowSettings: 1
   DevRegionSetOnce: 0

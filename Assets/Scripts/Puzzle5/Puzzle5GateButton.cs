@@ -1,12 +1,12 @@
 using System.Collections;
 using System.Collections.Generic;
+using Photon.Pun;
 using UnityEngine;
-using Unity.Netcode;
 using UnityEngine.Rendering.Universal;
 
-public class Puzzle5GateButton : NetworkBehaviour
+public class Puzzle5GateButton : MonoBehaviourPun
 {
-    NetworkVariable<int> activePadsCount = new NetworkVariable<int>(0);
+    private int activePadsCount = 0;
 
     public DoorController door;
     public SpriteRenderer padRenderer;
@@ -14,39 +14,33 @@ public class Puzzle5GateButton : NetworkBehaviour
     public Color activeColor;
     public Light2D padLight;
 
-    bool isActivated = false;
-    // Start is called before the first frame update
-    void Start()
+    private bool isActivated = false;
+
+    private void Start()
     {
         padRenderer = GetComponent<SpriteRenderer>();
-        if (padRenderer != null) 
+        if (padRenderer != null)
         {
             padRenderer.color = inactiveColor;
         }
 
-        if (padLight != null) 
+        if (padLight != null)
         {
             padLight.enabled = false;
         }
     }
 
-
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if(collision.CompareTag("Player") && !isActivated)
+        if (collision.CompareTag("Player") && !isActivated)
         {
             isActivated = true;
-            UpdateVisuals(true);
+            photonView.RPC("UpdateVisuals", RpcTarget.All, true);
 
-            if (IsServer)
+            if (PhotonNetwork.IsMasterClient)
             {
-                activePadsCount.Value++;
-                CheckDoorStateServerRpc();
-                
-            }
-            else
-            {
-                ActivatePadServerRpc();
+                activePadsCount++;
+                CheckDoorState();
             }
         }
     }
@@ -56,72 +50,51 @@ public class Puzzle5GateButton : NetworkBehaviour
         if (collision.CompareTag("Player") && isActivated)
         {
             isActivated = false;
-            UpdateVisuals(false);  // Update the visual feedback on the pad
+            photonView.RPC("UpdateVisuals", RpcTarget.All, false);
 
-            if (IsServer)
+            if (PhotonNetwork.IsMasterClient)
             {
-                activePadsCount.Value--;  // Only the server updates this value
-                CheckDoorStateServerRpc();  // Server checks if the door should open/close
-            }
-            else
-            {
-                // Client requests the server to update the state
-                DeactivatePadServerRpc();
+                activePadsCount--;
+                CheckDoorState();
             }
         }
     }
-    // Update is called once per frame
-    void UpdateVisuals(bool activated)
+
+    [PunRPC]
+    private void UpdateVisuals(bool activated)
     {
         if (padRenderer != null)
         {
             padRenderer.color = activated ? activeColor : inactiveColor;
         }
 
-        // Optionally, toggle a light effect
         if (padLight != null)
         {
             padLight.enabled = activated;
         }
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    void ActivatePadServerRpc()
+    private void CheckDoorState()
     {
-        activePadsCount.Value++;
-        CheckDoorStateServerRpc();
-    }
-    
-    [ServerRpc(RequireOwnership = false)]
-    void DeactivatePadServerRpc()
-    {
-        activePadsCount.Value--;
-        CheckDoorStateServerRpc();
-    }
-
-    [ServerRpc]
-    void CheckDoorStateServerRpc()
-    {
-        if (activePadsCount.Value == 3)
+        if (activePadsCount == 3)
         {
-            OpenDoorClientRpc();  // Open the door on all clients
+            photonView.RPC("OpenDoor", RpcTarget.All);
         }
         else
         {
-            CloseDoorClientRpc();  // Close the door on all clients
-
+            photonView.RPC("CloseDoor", RpcTarget.All);
         }
     }
 
-    [ClientRpc]
-    private void OpenDoorClientRpc()
+    [PunRPC]
+    private void OpenDoor()
     {
-        door.OpenDoor();  // Open the door for all players
+        door.OpenDoor();
     }
 
-    [ClientRpc]
-    private void CloseDoorClientRpc()
+    [PunRPC]
+    private void CloseDoor()
     {
-        door.CloseDoor();  // Close the door for all players
+        door.CloseDoor();
     }
 }

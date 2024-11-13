@@ -1,10 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
-using Unity.Netcode;
 using UnityEngine;
+using Photon.Pun;
 
-public class Mirror : NetworkBehaviour
+public class Mirror : MonoBehaviourPun
 {
     public float rotationSpeed = 100f;
     public GameObject highlightEffect; // A child object to show the highlight
@@ -29,12 +28,12 @@ public class Mirror : NetworkBehaviour
         if (collision.CompareTag("Player"))
         {
             playerController = collision.GetComponent<PlayerController>();
-            if (playerController != null && playerController.IsOwner)
+            if (playerController != null && photonView.IsMine)
             {
                 playerInRange = true;
                 playerController.interactText.gameObject.SetActive(true);
                 playerController.interactText.text = "Use 'Q' & 'E' to rotate mirror";
-                EnableHighlightAndArrowServerRpc(true, NetworkManager.Singleton.LocalClientId);
+                photonView.RPC("EnableHighlightAndArrowRPC", RpcTarget.AllBuffered, true);
             }
         }
     }
@@ -49,62 +48,42 @@ public class Mirror : NetworkBehaviour
                 playerController.interactText.gameObject.SetActive(false);
                 playerInRange = false;
                 playerController = null;
-                EnableHighlightAndArrowServerRpc(false, NetworkManager.Singleton.LocalClientId);
+                photonView.RPC("EnableHighlightAndArrowRPC", RpcTarget.AllBuffered, false);
             }
         }
     }
 
     private void Update()
     {
-        if (playerInRange && IsOwner)
+        if (playerInRange && photonView.IsMine)
         {
             if (Input.GetKey(KeyCode.Q))
             {
-                RotateMirrorServerRpc(-rotationSpeed * Time.deltaTime);
+                RotateMirror(-rotationSpeed * Time.deltaTime);
             }
             else if (Input.GetKey(KeyCode.E))
             {
-                RotateMirrorServerRpc(rotationSpeed * Time.deltaTime);
+                RotateMirror(rotationSpeed * Time.deltaTime);
             }
         }
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void RotateMirrorServerRpc(float rotationAmount)
+    private void RotateMirror(float rotationAmount)
     {
         transform.Rotate(Vector3.forward, rotationAmount);
         UpdateArrowIndicator();
-        RotateMirrorClientRpc(rotationAmount);
+        photonView.RPC("RotateMirrorRPC", RpcTarget.Others, rotationAmount);
     }
 
-    [ClientRpc]
-    private void RotateMirrorClientRpc(float rotationAmount)
+    [PunRPC]
+    private void RotateMirrorRPC(float rotationAmount)
     {
-        if (!IsOwner)
-        {
-            transform.Rotate(Vector3.forward, rotationAmount);
-            UpdateArrowIndicator();
-        }
+        transform.Rotate(Vector3.forward, rotationAmount);
+        UpdateArrowIndicator();
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    private void RequestOwnershipServerRpc(ulong clientId)
-    {
-        NetworkObject.ChangeOwnership(clientId);
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    private void EnableHighlightAndArrowServerRpc(bool enable, ulong clientId)
-    {
-        EnableHighlightAndArrowClientRpc(enable);
-        if (enable)
-        {
-            NetworkObject.ChangeOwnership(clientId);
-        }
-    }
-
-    [ClientRpc]
-    private void EnableHighlightAndArrowClientRpc(bool enable)
+    [PunRPC]
+    private void EnableHighlightAndArrowRPC(bool enable)
     {
         if (highlightEffect != null)
         {
@@ -118,7 +97,6 @@ public class Mirror : NetworkBehaviour
 
     private void UpdateArrowIndicator()
     {
-
         if (arrowIndicator != null)
         {
             Vector2 reflectedDirection = Vector2.Reflect(transform.right, transform.up);

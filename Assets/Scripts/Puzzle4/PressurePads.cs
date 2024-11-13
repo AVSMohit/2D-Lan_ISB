@@ -1,21 +1,34 @@
 using TMPro;
-using Unity.Netcode;
+using Photon.Pun;
 using UnityEngine;
+using System.Collections.Generic;
+using System.Collections;
 
-public class PressurePads : NetworkBehaviour
+public class PressurePads : MonoBehaviourPun
 {
     public Color defaultColor = Color.red;
     public Color activatedColor = Color.green;
-    public Color wrongColor = Color.yellow; // Color for incorrect interaction
+    public Color wrongColor = Color.yellow;
     private SpriteRenderer spriteRenderer;
     private bool isActivated = false;
     public int padNumber;
-    public ulong assignedPlayerId;  // Player ID assigned to this pad
+    public int assignedPlayerId;
     public bool isPartOfSequence;
-    public int sequenceIndex = -1;  // The position of this pad in the correct sequence
+    public int sequenceIndex = -1;
+    public static PressurePadManager Instance { get; private set; }
 
-    private PlayerController playerController;  // Reference to the player entering the pad's trigger
-    private TMP_Text interactText;  // Reference to the interaction text
+    private void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject); // Optional, if you want it to persist across scenes
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
 
     private void Start()
     {
@@ -25,79 +38,39 @@ public class PressurePads : NetworkBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.CompareTag("Player"))
+        if (collision.CompareTag("Player") && photonView.IsMine)
         {
-            playerController = collision.GetComponent<PlayerController>();
-
-            // Only show interaction text if the player is the one assigned to this pad
-            if (playerController != null && playerController.OwnerClientId == assignedPlayerId)
-            {
-                interactText = playerController.interactText;
-                ShowInteractText(true);  // Show interaction text when player enters the pad
-            }
+            // Check assigned player ID for pad interaction
         }
     }
 
-    private void OnTriggerExit2D(Collider2D collision)
+    public void Interact()
     {
-        if (collision.CompareTag("Player"))
+        if (isPartOfSequence && PressurePadManager.Instance.CheckPadSequence(padNumber))
         {
-            PlayerController controller = collision.GetComponent<PlayerController>();
-
-            // Ensure that the interaction text is hidden only for the correct player
-            if (controller == playerController)
-            {
-                ShowInteractText(false);  // Hide interaction text when player leaves the pad
-                playerController = null;
-            }
-        }
-    }
-
-    private void Update()
-    {
-        if (playerController != null && Input.GetKeyDown(KeyCode.E) && !isActivated)
-        {
-            // Ensure that only the assigned player can interact with the pad
-            if (playerController.OwnerClientId == assignedPlayerId)
-            {
-                InteractWithPadServerRpc(NetworkManager.Singleton.LocalClientId);
-            }
-        }
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    private void InteractWithPadServerRpc(ulong playerId)
-    {
-        // Ensure that the correct player interacts with the pad based on the assigned player
-        if (playerId == assignedPlayerId && isPartOfSequence && PressurePadManager.Instance.CheckPadSequence(padNumber))
-        {
-            // Correct interaction
-            isActivated = true;
-            ActivatePadClientRpc();
-            PressurePadManager.Instance.OnPadActivated(padNumber);  // Notify the manager of correct interaction
+            photonView.RPC("ActivatePad", RpcTarget.AllBuffered);
         }
         else
         {
-            // Incorrect interaction, reset the game
-            ShowWrongInteractionClientRpc();  // Show wrong interaction feedback
-            PressurePadManager.Instance.ResetPadsClientRpc();  // Reset the game
+            photonView.RPC("ShowWrongInteraction", RpcTarget.AllBuffered);
+            PressurePadManager.Instance.photonView.RPC("ResetPads", RpcTarget.AllBuffered);
         }
     }
 
-    [ClientRpc]
-    private void ActivatePadClientRpc()
+    [PunRPC]
+    private void ActivatePad()
     {
-        spriteRenderer.color = activatedColor;  // Turn the pad green
-        ShowInteractText(false);  // Hide interaction text when pad is activated
+        spriteRenderer.color = activatedColor;
+        isActivated = true;
     }
 
-    [ClientRpc]
-    private void ShowWrongInteractionClientRpc()
+    [PunRPC]
+    private void ShowWrongInteraction()
     {
-        StartCoroutine(BlinkWrongPad());  // Blink the pad to indicate wrong interaction
+        StartCoroutine(BlinkWrongPad());
     }
 
-    private System.Collections.IEnumerator BlinkWrongPad()
+    private IEnumerator BlinkWrongPad()
     {
         for (int i = 0; i < 3; i++)
         {
@@ -112,17 +85,5 @@ public class PressurePads : NetworkBehaviour
     {
         isActivated = false;
         spriteRenderer.color = defaultColor;
-        if (playerController != null)
-        {
-            ShowInteractText(false);  // Ensure interaction text is hidden when resetting the pad
-        }
-    }
-
-    private void ShowInteractText(bool show)
-    {
-        if (interactText != null)
-        {
-            interactText.gameObject.SetActive(show);  // Show or hide the interaction text
-        }
     }
 }

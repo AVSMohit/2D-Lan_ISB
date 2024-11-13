@@ -1,4 +1,3 @@
-using System.Collections;
 using TMPro;
 using Photon.Pun;
 using Photon.Realtime;
@@ -9,7 +8,7 @@ public class NetworkUI : MonoBehaviourPunCallbacks
 {
     public InputField hostNameInputField;
     public InputField clientNameInputField;
-    public InputField joinCodeInputField; // This will act as the room name input for joining
+    public InputField joinCodeInputField;
     public Button hostButton;
     public Button clientButton;
     public TMP_Text statusText;
@@ -18,13 +17,22 @@ public class NetworkUI : MonoBehaviourPunCallbacks
     public GameObject lobbyPanel;
     public GameManager gameManager;
 
+    private bool isConnectedToMaster = false;
+
     private void Start()
     {
-        PhotonNetwork.AutomaticallySyncScene = true;
+        PhotonNetwork.ConnectUsingSettings();
+        statusText.text = "Connecting to Master Server...";
 
         // Add listeners to buttons
         hostButton.onClick.AddListener(StartHost);
         clientButton.onClick.AddListener(StartClient);
+    }
+
+    public override void OnConnectedToMaster()
+    {
+        isConnectedToMaster = true;
+        statusText.text = "Connected to Master Server. Ready to host or join.";
     }
 
     private void StartHost()
@@ -37,52 +45,27 @@ public class NetworkUI : MonoBehaviourPunCallbacks
             return;
         }
 
-        // Store the player name in PlayerPrefs
         PhotonNetwork.NickName = playerName;
 
-        // Create room options and settings
+        if (PhotonNetwork.InRoom)
+        {
+            PhotonNetwork.LeaveRoom();
+            statusText.text = "Leaving current room to return to Master Server...";
+            return;
+        }
+
         RoomOptions roomOptions = new RoomOptions { MaxPlayers = 4 };
+        string roomName = "Room_" + Random.Range(1000, 9999);
 
-        // Create a room with a unique name
-        string roomName = "Room_" + Random.Range(1000, 9999); // You can modify this to use more meaningful room names
         PhotonNetwork.CreateRoom(roomName, roomOptions);
-
-        statusText.text = "Creating room...";
-        Debug.Log("Creating room...");
-    }
-
-    private void StartClient()
-    {
-        string playerName = clientNameInputField.text;
-        string roomName = joinCodeInputField.text; // Use as room name for joining
-
-        if (string.IsNullOrEmpty(playerName))
-        {
-            statusText.text = "Please enter a name.";
-            return;
-        }
-
-        if (string.IsNullOrEmpty(roomName))
-        {
-            statusText.text = "Please enter a room name.";
-            return;
-        }
-
-        // Store the player name in PlayerPrefs
-        PhotonNetwork.NickName = playerName;
-
-        PhotonNetwork.JoinRoom(roomName);
-        statusText.text = "Joining room...";
-        Debug.Log("Joining room...");
+        statusText.text = $"Creating room with code: {roomName}...";
     }
 
     public override void OnCreatedRoom()
     {
-        base.OnCreatedRoom();
         statusText.text = "Room created successfully!";
-        Debug.Log("Room created successfully.");
-
         lobbyManager.UpdateLobbyUI();
+        lobbyManager.DisplayRoomCode(PhotonNetwork.CurrentRoom.Name);
         joinPanel.SetActive(false);
         lobbyPanel.SetActive(true);
 
@@ -90,30 +73,66 @@ public class NetworkUI : MonoBehaviourPunCallbacks
         lobbyManager.EnableStartGameButton();
     }
 
-    public override void OnCreateRoomFailed(short returnCode, string message)
+    private void StartClient()
     {
-        base.OnCreateRoomFailed(returnCode, message);
-        statusText.text = $"Failed to create room: {message}";
-        Debug.LogError($"Failed to create room: {message}");
+        string playerName = clientNameInputField.text;
+        string joinCode = joinCodeInputField.text;
+
+        if (string.IsNullOrEmpty(playerName))
+        {
+            statusText.text = "Please enter a name.";
+            return;
+        }
+
+        if (string.IsNullOrEmpty(joinCode))
+        {
+            statusText.text = "Please enter a join code.";
+            return;
+        }
+
+        PhotonNetwork.NickName = playerName;
+        PhotonNetwork.JoinRoom(joinCode);
+        statusText.text = $"Joining room with code: {joinCode}...";
     }
 
     public override void OnJoinedRoom()
     {
-        base.OnJoinedRoom();
-        statusText.text = "Joined room successfully!";
-        Debug.Log("Joined room successfully.");
-
-        gameManager.InitializeGameManager();
-
+        statusText.text = "Successfully joined the room!";
         lobbyManager.UpdateLobbyUI();
         joinPanel.SetActive(false);
         lobbyPanel.SetActive(true);
+
+        // Display the room code or any relevant room information
+        if (PhotonNetwork.CurrentRoom != null)
+        {
+            lobbyManager.DisplayRoomCode(PhotonNetwork.CurrentRoom.Name);
+        }
+
+        // Initialize other UI components as needed
+        gameManager.InitializeGameManager();
     }
+
 
     public override void OnJoinRoomFailed(short returnCode, string message)
     {
-        base.OnJoinRoomFailed(returnCode, message);
         statusText.text = $"Failed to join room: {message}";
-        Debug.LogError($"Failed to join room: {message}");
+    }
+
+    public override void OnCreateRoomFailed(short returnCode, string message)
+    {
+        statusText.text = $"Failed to create room: {message}";
+    }
+
+    public override void OnLeftRoom()
+    {
+        if (!PhotonNetwork.IsConnectedAndReady)
+        {
+            PhotonNetwork.ConnectUsingSettings();
+        }
+        else
+        {
+            PhotonNetwork.JoinLobby();
+        }
+        statusText.text = "Returning to Master Server...";
     }
 }

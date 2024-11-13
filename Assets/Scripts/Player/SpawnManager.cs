@@ -36,16 +36,24 @@ public class SpawnManager : MonoBehaviourPunCallbacks
 
     public Transform GetSpawnPointForPlayer(int actorNumber)
     {
-        if (!playerSpawnPoints.ContainsKey(actorNumber))
+        if (spawnPoints == null || spawnPoints.Length == 0)
         {
-            // Assign a new spawn point based on the available points
-            int index = actorNumber % spawnPoints.Length;
-            playerSpawnPoints[actorNumber] = spawnPoints[index];
+            Debug.LogError("Spawn points array is empty or null!");
+            return null;
         }
 
-        return playerSpawnPoints[actorNumber];
+        // Ensure the index is within the bounds of spawnPoints array
+        int index = actorNumber % spawnPoints.Length;
+        if (index >= 0 && index < spawnPoints.Length)
+        {
+            return spawnPoints[index];
+        }
+        else
+        {
+            Debug.LogError($"Index {index} is out of range for spawn points array.");
+            return spawnPoints[0]; // Fallback to the first spawn point if out of range
+        }
     }
-
     // Move the player to the assigned spawn point
     private void MovePlayerToSpawnPoint(int actorNumber)
     {

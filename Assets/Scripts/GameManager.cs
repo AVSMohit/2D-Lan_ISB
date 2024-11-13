@@ -19,6 +19,15 @@ public class GameManager : MonoBehaviourPunCallbacks
                 clientStatusText.text = "Waiting for clients...";
             }
         }
+
+        // Spawn the player for the client who just joined
+        SpawnPlayer(PhotonNetwork.LocalPlayer.ActorNumber);
+    }
+
+    public override void OnJoinedRoom()
+    {
+        Debug.Log("Joined room. Spawning player for this client.");
+        SpawnPlayer(PhotonNetwork.LocalPlayer.ActorNumber);
     }
 
     public override void OnPlayerEnteredRoom(Player newPlayer)
@@ -33,8 +42,6 @@ public class GameManager : MonoBehaviourPunCallbacks
 
     private void SpawnPlayer(int actorNumber)
     {
-        if (!PhotonNetwork.IsMasterClient) return;
-
         var spawnManager = FindObjectOfType<SpawnManager>();
         if (spawnManager != null)
         {
@@ -62,7 +69,6 @@ public class GameManager : MonoBehaviourPunCallbacks
 
     private void OnDisable()
     {
-        // Clean up any scene-specific logic if necessary
         Debug.Log("GameManager disabled.");
     }
 

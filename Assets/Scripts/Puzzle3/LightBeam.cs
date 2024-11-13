@@ -1,12 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Unity.Netcode;
-using static UnityEngine.GraphicsBuffer;
+using Photon.Pun;
 
-public class LightBeam : NetworkBehaviour
+public class LightBeam : MonoBehaviourPun, IPunObservable
 {
-
     public LineRenderer lineRenderer;
     public LayerMask reflectLayer;
     public LayerMask targetLayer;
@@ -21,17 +19,16 @@ public class LightBeam : NetworkBehaviour
 
     private void Update()
     {
-        if (IsServer)
+        if (PhotonNetwork.IsMasterClient)
         {
             Vector3[] positions = DrawLightBeam();
-            UpdateLightBeamClientRpc(positions, positions.Length);
+            photonView.RPC("UpdateLightBeamRPC", RpcTarget.All, positions, positions.Length);
         }
     }
 
     private Vector3[] DrawLightBeam()
     {
         List<Vector3> positions = new List<Vector3> { transform.position };
-
         Vector2 currentDirection = direction;
         Vector3 currentPosition = transform.position;
         bool targetHitThisFrame = false;
@@ -43,18 +40,16 @@ public class LightBeam : NetworkBehaviour
             {
                 positions.Add(hit.point);
 
-                // Check if the hit object is a target
                 if (hit.collider.CompareTag("Target"))
                 {
-                    // Call the target's OnHit method via the server
                     TargetToHit target = hit.collider.GetComponent<TargetToHit>();
-                    if (target != null && IsServer)  // Only the server should update the target
+                    if (target != null && PhotonNetwork.IsMasterClient)
                     {
-                        target.OnHit();  // The server will propagate this change to clients
+                        target.OnHit();
                         lastHitTarget = target;
                         targetHitThisFrame = true;
                     }
-                    break; // Stop the beam when it hits a target
+                    break;
                 }
 
                 currentDirection = Vector2.Reflect(currentDirection, hit.normal);
@@ -67,7 +62,6 @@ public class LightBeam : NetworkBehaviour
             }
         }
 
-        // If the target was hit in the previous frame but not in this frame, reset the target
         if (lastHitTarget != null && !targetHitThisFrame)
         {
             lastHitTarget.ResetTarget();
@@ -80,11 +74,32 @@ public class LightBeam : NetworkBehaviour
         return positions.ToArray();
     }
 
-    [ClientRpc]
-    private void UpdateLightBeamClientRpc(Vector3[] positions, int count)
+    [PunRPC]
+    private void UpdateLightBeamRPC(Vector3[] positions, int count)
     {
         lineRenderer.positionCount = count;
         lineRenderer.SetPositions(positions);
     }
 
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+    {
+        if (stream.IsWriting)
+        {
+            stream.SendNext(lineRenderer.positionCount);
+            for (int i = 0; i < lineRenderer.positionCount; i++)
+            {
+                stream.SendNext(lineRenderer.GetPosition(i));
+            }
+        }
+        else
+        {
+            lineRenderer.positionCount = (int)stream.ReceiveNext();
+            Vector3[] positions = new Vector3[lineRenderer.positionCount];
+            for (int i = 0; i < positions.Length; i++)
+            {
+                positions[i] = (Vector3)stream.ReceiveNext();
+            }
+            lineRenderer.SetPositions(positions);
+        }
+    }
 }
