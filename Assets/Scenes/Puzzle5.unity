@@ -8428,22 +8428,25 @@ MonoBehaviour:
   m_text: '-This puzzle is a cordination puzzle.
 
 
-    -Players have to turn the
+    -Players have to turn the 
     Red square switches to Green by pressing "E" while standing on them to open the
     gate of their teammate.
 
 
-    -To complete the level the players have to come
-    out of their designated paths and turn 4 correct switches from Red to Green to
-    turn the main Gate Color from Red to Green.
+    - There are 6 switches three inside the maze and
+    three outside the maze
 
 
-    - Once the Gate turns Green
-    all the Players should go through the Main Gate to go to the next puzzle.
+    - Three Switches should be Green at all times to
+    open the gate for the other teammate. Doesnt matter where the switches are
 
 
     -
-    Players can move using <color=yellow>WASD</color> keys.'
+    Players need to navigate thru the maze to find the switches and the exit of the
+    maze.
+
+
+    - Players can move using <color=yellow>WASD</color> keys.'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 1c9998edd9ab6464d9172b5d04104531, type: 2}
   m_sharedMaterial: {fileID: -3549273854030844464, guid: 1c9998edd9ab6464d9172b5d04104531, type: 2}
@@ -8470,7 +8473,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 25.9
+  m_fontSize: 24.45
   m_fontSizeBase: 36
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -10944,7 +10947,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fafa4ea0b5beb3244911387fabf87098, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  nextScceneName: Puzzle2
+  nextScceneName: LobbyScene
 --- !u!1 &1800060787
 GameObject:
   m_ObjectHideFlags: 0
@@ -21118,7 +21121,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.00001515505, y: 155.61444}
+  m_AnchoredPosition: {x: -0.00001515505, y: 155.61421}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &2114273743067303828
@@ -21758,8 +21761,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 8992883837992265131}
   m_HandleRect: {fileID: 8239309898860023043}
   m_Direction: 2
-  m_Value: -0.0000015688843
-  m_Size: 0.48127976
+  m_Value: 0
+  m_Size: 0.48128602
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
