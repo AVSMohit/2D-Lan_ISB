@@ -48,10 +48,16 @@ public class LobbyManager : NetworkBehaviour
     private void OnClientConnected(ulong clientId)
     {
         Debug.Log($"Client {clientId} connected.");
+
+        // If this is the host, notify clients to set their name,
+        // but skip the host if it's acting as room creator.
         if (NetworkManager.Singleton.IsHost)
         {
-            Debug.Log("Host detected OnClientConnected.");
-            NotifyClientToSetNameClientRpc(clientId);
+            if (!(RoomSettings.IsRoomCreator && clientId == NetworkManager.Singleton.LocalClientId))
+            {
+                Debug.Log("Host detected OnClientConnected.");
+                NotifyClientToSetNameClientRpc(clientId);
+            }
         }
 
         UpdateLobbyUI();
@@ -63,10 +69,17 @@ public class LobbyManager : NetworkBehaviour
     {
         if (NetworkManager.Singleton.LocalClientId == clientId)
         {
+            // If this client is the host and is set as room creator, do not set a name.
+            if (NetworkManager.Singleton.IsHost && RoomSettings.IsRoomCreator)
+            {
+                return;
+            }
+
             string playerName = PlayerPrefs.GetString("PlayerName", $"Player {clientId}");
             SetPlayerNameServerRpc(playerName);
         }
     }
+
 
     [ServerRpc(RequireOwnership = false)]
     private void SetPlayerNameServerRpc(string playerName, ServerRpcParams rpcParams = default)
@@ -101,11 +114,15 @@ public class LobbyManager : NetworkBehaviour
 
     public void UpdateLobbyUI()
     {
+        // Use the count from the replicated NetworkList instead of ConnectedClients.
+        int playerCount = playerNames.Count;
+
         for (int i = 0; i < playerTexts.Length; i++)
         {
-            if (i < playerNames.Count)
+            if (i < playerCount)
             {
-                playerTexts[i].text = playerNames[i].ToString();
+                // Display generic labels (e.g., "Player 1", "Player 2", etc.)
+                playerTexts[i].text = "Player " + (i + 1).ToString();
             }
             else
             {
@@ -113,6 +130,9 @@ public class LobbyManager : NetworkBehaviour
             }
         }
     }
+
+
+
 
     public void DisplayRoomCode(string roomCode)
     {
@@ -125,6 +145,7 @@ public class LobbyManager : NetworkBehaviour
         {
             Debug.Log("Start Game clicked. Loading GameScene.");
             SceneTransitionManager.Instance.TransitionToScene("SplitPath");
+            GlobaGameManager.Instance.StartGame();
         }
         else
         {

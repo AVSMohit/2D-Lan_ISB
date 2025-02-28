@@ -25,14 +25,16 @@ public class CameraController : MonoBehaviour
 
     void LateUpdate()
     {
+        playerTransforms.RemoveAll(item => item == null);
+
         if (playerTransforms.Count == 0)
             return;
 
         Vector3 centerPoint = GetCenterPoint(playerTransforms);
         Vector3 newPosition = centerPoint;
-        newPosition.z = -10f; // Set the camera z position to be behind the players
+        newPosition.z = -10f; // Set the camera z position
 
-        // Clamp the camera position within the map boundaries
+        // Clamp the camera position within the map boundaries.
         newPosition.x = Mathf.Clamp(newPosition.x, minX + cam.orthographicSize * cam.aspect, maxX - cam.orthographicSize * cam.aspect);
         newPosition.y = Mathf.Clamp(newPosition.y, minY + cam.orthographicSize, maxY - cam.orthographicSize);
 

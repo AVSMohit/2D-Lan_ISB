@@ -4,7 +4,8 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
-using System.Security.Cryptography;
+using Unity.Collections;
+
 public class PlayerController : NetworkBehaviour
 {
     public float moveSpeed;
@@ -19,38 +20,85 @@ public class PlayerController : NetworkBehaviour
     public float groundCheckRadius = 0.1f;
 
     CameraController cameraController;
-
     public TMP_Text interactText;
-
     public float weight = 1f;
 
-    
-    // Start is called before the first frame update
-    void Start()
+    // Sprites for color changes
+    SpriteRenderer bodySr;
+    SpriteRenderer headSr;
+
+    // Network variable to hold gender ("male" or "female")
+    public NetworkVariable<FixedString32Bytes> gender = new NetworkVariable<FixedString32Bytes>();
+
+    public override void OnNetworkSpawn()
     {
         rb = GetComponent<Rigidbody2D>();
-        rb.gravityScale = 0;
         cameraController = FindObjectOfType<CameraController>();
+
+        // Get the body sprite (assume it's on the same GameObject)
+        bodySr = GetComponent<SpriteRenderer>();
+        // For head, try to get all SpriteRenderers and use one that is not the body.
+        SpriteRenderer[] srs = GetComponentsInChildren<SpriteRenderer>();
+        if (srs.Length > 1)
+        {
+            // Assume the first one is the body and the second one is the head.
+            headSr = srs[1];
+        }
+        else
+        {
+            // Fallback: if only one is found, use it for both.
+            headSr = bodySr;
+        }
+
+        // Subscribe to changes so that color updates on all clients.
+        gender.OnValueChanged += OnGenderChanged;
+
+        if (IsOwner)
+        {
+            // Read the chosen gender from PlayerPrefs (set via your GenderSelection UI)
+            string chosenGender = PlayerPrefs.GetString("Gender", "male");
+            SetGenderServerRpc(chosenGender);
+        }
+
+        // Update the color based on the network variable
+        OnGenderChanged(default, gender.Value);
+
         if (cameraController != null)
         {
             cameraController.AddPlayer(transform);
         }
     }
 
-    private void OnEnable()
+    [ServerRpc(RequireOwnership = false)]
+    public void SetGenderServerRpc(string genderValue, ServerRpcParams rpcParams = default)
     {
-        gameObject.tag = "Player";
+        gender.Value = genderValue;
     }
 
-    private void OnDisable()
+    private void OnGenderChanged(FixedString32Bytes oldValue, FixedString32Bytes newValue)
     {
-        if (cameraController != null)
+        if (bodySr == null)
+            return;
+
+        string g = newValue.ToString().ToLower();
+        if (g == "female")
         {
-            cameraController.RemovePlayer(transform);
+            // Set to a pinkish color
+            Color32 femaleColor = new Color32(254, 136, 136, 255);
+            bodySr.color = femaleColor;
+            if (headSr != null)
+                headSr.color = femaleColor;
+        }
+        else
+        {
+            // Assume male - set to a blue color
+            Color32 maleColor = new Color32(0, 122, 254, 255);
+            bodySr.color = maleColor;
+            if (headSr != null)
+                headSr.color = maleColor;
         }
     }
 
-    // Update is called once per frame
     void Update()
     {
         if (!IsOwner) return;
@@ -59,7 +107,6 @@ public class PlayerController : NetworkBehaviour
 
         if (gravityEnabled)
         {
-            // Handle jumping only when gravity is enabled
             if (Input.GetButtonDown("Jump") && isGrounded)
             {
                 Jump();
@@ -67,30 +114,23 @@ public class PlayerController : NetworkBehaviour
         }
         else
         {
-            // Allow vertical movement when gravity is disabled
             moveInput.y = Input.GetAxis("Vertical");
         }
     }
 
-    private void FixedUpdate()
+    void FixedUpdate()
     {
         if (IsOwner)
         {
             if (gravityEnabled)
             {
-                // Apply gravity and horizontal movement when gravity is enabled
                 rb.velocity = new Vector2(moveInput.x * moveSpeed, rb.velocity.y);
-
-                // Check if grounded
                 isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
             }
             else
             {
-                // Allow free movement when gravity is disabled
                 rb.velocity = moveInput * moveSpeed;
             }
-
-            // Apply gravity scale
             rb.gravityScale = gravityEnabled ? 1 : 0;
         }
     }

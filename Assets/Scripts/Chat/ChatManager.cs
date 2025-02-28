@@ -55,7 +55,8 @@ public class ChatManager : NetworkBehaviour
         if (NetworkManager.Singleton.ConnectedClients.TryGetValue(clientId, out var client))
         {
             var playerNameScript = client.PlayerObject.GetComponent<PlayerName>();
-            return playerNameScript != null ? playerNameScript.playerNameText.text : $"Player {clientId}";
+            return playerNameScript != null ? playerNameScript.playerID.ToString() : $"Player {clientId}";
+
         }
         return $"Player {clientId}";
     }

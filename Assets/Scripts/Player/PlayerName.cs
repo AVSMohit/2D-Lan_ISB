@@ -9,44 +9,74 @@ public class PlayerName : NetworkBehaviour
 {
     public TMP_Text playerNameText; // TextMeshPro Text to display the player name
 
-    public NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>();
+    // Network variable holding the player's name (college ID or generic label)public NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>();
+    public NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>(new FixedString32Bytes(""));
+
+
+    // Expose the network variable value via a property called playerID
+    public FixedString32Bytes playerID
+    {
+        get { return playerName.Value; }
+    }
 
     public override void OnNetworkSpawn()
     {
+        if (playerNameText == null)
+        {
+            playerNameText = GetComponentInChildren<TMP_Text>();
+            if (playerNameText == null)
+            {
+                Debug.LogError("PlayerName: TMP_Text is not assigned and could not be found.");
+                return;
+            }
+        }
+
         playerName.OnValueChanged += OnPlayerNameChanged;
 
         if (IsOwner)
         {
-            // Get the player's name from PlayerPrefs
-            string name = PlayerPrefs.GetString("PlayerName", $"Player {OwnerClientId}");
-
-            // Set the player's name on the server
-            SetPlayerNameServerRpc(name);
+            // For the local player, set name to "YOU"
+            SetPlayerNameServerRpc("YOU");
+        }
+        else
+        {
+            // For remote players, set a generic label
+            SetPlayerNameServerRpc("Player");
         }
 
-        // Update the player name text immediately after spawning
+        // Update immediately
         OnPlayerNameChanged(default, playerName.Value);
     }
 
     [ServerRpc(RequireOwnership = false)]
     public void SetPlayerNameServerRpc(string name, ServerRpcParams rpcParams = default)
     {
-        // Set this player's name on the server
         playerName.Value = name;
-
-        // Sync the name across all clients
         UpdatePlayerNameClientRpc(name);
     }
 
     [ClientRpc]
     private void UpdatePlayerNameClientRpc(string name)
     {
-        // Update the player name on each client
-        playerNameText.text = name;
+        if (playerNameText == null)
+        {
+            playerNameText = GetComponentInChildren<TMP_Text>();
+        }
+        if (playerNameText != null)
+        {
+            playerNameText.text = name;
+        }
     }
 
     private void OnPlayerNameChanged(FixedString32Bytes oldName, FixedString32Bytes newName)
     {
-        playerNameText.text = newName.ToString();  // Display the updated player name
+        if (playerNameText == null)
+        {
+            playerNameText = GetComponentInChildren<TMP_Text>();
+        }
+        if (playerNameText != null)
+        {
+            playerNameText.text = newName.ToString();
+        }
     }
 }

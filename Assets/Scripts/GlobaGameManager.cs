@@ -151,6 +151,7 @@ public class GlobaGameManager : NetworkBehaviour
 
         gameStarted = true;
         isPaused = false;  // Start the timer and scoring
+        gameCanvas.gameObject.SetActive(true);
         UpdateTimerText();
         Debug.Log("Game started.");
     }
@@ -174,7 +175,7 @@ public class GlobaGameManager : NetworkBehaviour
             StartGame();  // Ensure the game starts properly if not already started
         }
 
-        if (gameStarted)
+       else if (gameStarted)
         {
             isPaused = false;  // Resume the timer only if the game has started
             UpdateTimerText();  // Update the timer to reflect the current time
@@ -195,7 +196,7 @@ public class GlobaGameManager : NetworkBehaviour
             {
                 if (player.Value.PlayerObject.TryGetComponent(out PlayerName playerNameComponent))
                 {
-                    playerNames[player.Key] = playerNameComponent.playerName.Value.ToString();
+                    playerNames[player.Key] = playerNameComponent.playerID.Value.ToString();
                 }
                 else
                 {

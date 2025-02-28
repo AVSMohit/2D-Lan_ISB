@@ -11,7 +11,8 @@ using UnityEngine.UI;
 public class NetworkUI : MonoBehaviour
 {
     public InputField hostNameInputField;
-    public InputField clientNameInputField;
+    public InputField roomPasswordInputField;
+    public InputField clientPGIDtext;
     public InputField joinCodeInputField;
     public Button hostButton;
     public Button clientButton;
@@ -32,16 +33,31 @@ public class NetworkUI : MonoBehaviour
 
     private async void StartHost()
     {
-        string playerName = hostNameInputField.text;
+        //string playerName = hostNameInputField.text;
 
-        if (string.IsNullOrEmpty(playerName))
+        //if (string.IsNullOrEmpty(playerName))
+        //{
+        //    statusText.text = "Please enter a name.";
+        //    return;
+        //}
+
+        //// Store the player name in PlayerPrefs
+        //PlayerPrefs.SetString("PlayerName", playerName);
+
+        RoomSettings.IsRoomCreator = true;
+
+        string password = roomPasswordInputField.text;
+
+        if(string.IsNullOrEmpty(password))
         {
-            statusText.text = "Please enter a name.";
+            statusText.text = "please click on join room";
             return;
         }
-
-        // Store the player name in PlayerPrefs
-        PlayerPrefs.SetString("PlayerName", playerName);
+        if(password != "letmein")
+        {
+            statusText.text = "incorrect";
+            return;
+        }
 
         await UnityServicesInitializer.InitializeUnityServices();
         try
@@ -55,9 +71,11 @@ public class NetworkUI : MonoBehaviour
             var relayServerData = new RelayServerData(allocation, "dtls");
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
 
+            // Start the host
             NetworkManager.Singleton.StartHost();
             Debug.Log("Host started.");
 
+            // Update UI for the lobby, etc.
             lobbyManager.UpdateLobbyUI();
             lobbyManager.DisplayRoomCode(joinCode);
             joinPanel.SetActive(false);
@@ -75,7 +93,7 @@ public class NetworkUI : MonoBehaviour
 
     private async void StartClient()
     {
-        string playerName = clientNameInputField.text;
+        string playerName = clientPGIDtext.text;
         string joinCode = joinCodeInputField.text;
 
         if (string.IsNullOrEmpty(playerName))
@@ -91,7 +109,7 @@ public class NetworkUI : MonoBehaviour
         }
 
         // Store the player name in PlayerPrefs
-        PlayerPrefs.SetString("PlayerName", playerName);
+        PlayerPrefs.SetString("PlayerPGID", playerName);
 
         await UnityServicesInitializer.InitializeUnityServices();
         try

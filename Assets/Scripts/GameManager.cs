@@ -26,15 +26,23 @@ public class GameManager : MonoBehaviour
 
     public void OnClientConnected(ulong clientId)
     {
+        // If this client is the host and is acting as the room creator, skip spawning.
+        if (clientId == NetworkManager.Singleton.LocalClientId && RoomSettings.IsRoomCreator)
+        {
+            Debug.Log($"Client {clientId} is the room creator; no player spawned.");
+            return;
+        }
+
         Debug.Log($"Client {clientId} connected.");
 
-        // Only spawn the player if a scene is not currently loading
+        // If a scene is not currently loading, spawn the player for this client.
         if (!SceneTransitionManager.Instance.isSceneLoading)
         {
             Debug.Log($"Spawning player for client {clientId}");
-           // SpawnPlayer(clientId);  // Spawn only on first connection, not during scene transitions
+            SpawnPlayer(clientId);
         }
     }
+
 
 
     private void SpawnPlayer(ulong clientId)
@@ -91,21 +99,27 @@ public class GameManager : MonoBehaviour
         if (sceneEvent.SceneEventType == SceneEventType.LoadComplete && NetworkManager.Singleton.IsServer)
         {
             Debug.Log("Scene loaded, respawning players.");
-           // isSceneLoading = false;
 
-            // Respawn players after the new scene loads
             foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
             {
-                if (client.PlayerObject == null) // Ensure players are only respawned if they don't already exist
+                // Skip spawning if the player object is already present...
+                if (client.PlayerObject == null)
                 {
+                    // Skip for the host if they are the room creator.
+                    if (client.ClientId == NetworkManager.Singleton.LocalClientId && RoomSettings.IsRoomCreator)
+                    {
+                        Debug.Log("Host is room creator; skipping respawn.");
+                        continue;
+                    }
                     RespawnPlayer(client.ClientId);
                 }
             }
 
-            // Unsubscribe from the scene loaded event to prevent multiple respawns
+            // Unsubscribe from the scene loaded event to prevent multiple respawns.
             NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneChanged;
         }
     }
+
 
     private void ReassignPlayersToSpawnPoints()
     {
@@ -116,13 +130,18 @@ public class GameManager : MonoBehaviour
     }
     public void RespawnPlayer(ulong clientId)
     {
+        // Skip respawn for the host acting as room creator.
+        if (clientId == NetworkManager.Singleton.LocalClientId && RoomSettings.IsRoomCreator)
+        {
+            Debug.Log("Host is room creator; no respawn needed.");
+            return;
+        }
+
         var spawnManager = FindObjectOfType<SpawnManager>();
         if (spawnManager != null)
         {
             var spawnPosition = spawnManager.GetSpawnPointForPlayer(clientId).position;
             var playerInstance = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
-
-            // Ensure the player is spawned as a networked object
             playerInstance.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId);
             Debug.Log($"Respawned player {clientId} at {spawnPosition}");
         }
@@ -131,4 +150,5 @@ public class GameManager : MonoBehaviour
             Debug.LogError("SpawnManager not found in the new scene!");
         }
     }
+
 }

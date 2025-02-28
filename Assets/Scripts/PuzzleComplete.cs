@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Unity.Multiplayer.Samples.Utilities.ClientAuthority;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class PuzzleComplete : NetworkBehaviour
 {
@@ -40,6 +41,10 @@ public class PuzzleComplete : NetworkBehaviour
     {
         if (playersInTrigger.Count == NetworkManager.Singleton.ConnectedClientsIds.Count)
         {
+            if(SceneManager.GetActiveScene().name == "Puzzle5")
+            {
+                GlobaGameManager.Instance.EndGame();
+            }
             TriggerSceneTransitionServerRpc();
         }
     }

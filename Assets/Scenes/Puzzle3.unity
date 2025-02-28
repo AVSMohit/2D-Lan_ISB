@@ -2710,7 +2710,7 @@ PrefabInstance:
 
 
         - All the Players should enter the Hexagon when
-        it turns green to go to net puzzle.
+        it turns green to go to next puzzle.
 
 
         - Use WASD to Move.
@@ -2719,7 +2719,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3139173533246650216, guid: 4bfa5103c96f5a8488c0160b3d468c78, type: 3}
       propertyPath: m_fontSize
-      value: 25.3
+      value: 24.95
       objectReference: {fileID: 0}
     - target: {fileID: 4136552625376239436, guid: 4bfa5103c96f5a8488c0160b3d468c78, type: 3}
       propertyPath: m_Name
@@ -2728,6 +2728,18 @@ PrefabInstance:
     - target: {fileID: 4136552625376239436, guid: 4bfa5103c96f5a8488c0160b3d468c78, type: 3}
       propertyPath: m_IsActive
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4816183542477259275, guid: 4bfa5103c96f5a8488c0160b3d468c78, type: 3}
+      propertyPath: m_text
+      value: Puzzle 3 of 5 - Mirrors
+      objectReference: {fileID: 0}
+    - target: {fileID: 4816183542477259275, guid: 4bfa5103c96f5a8488c0160b3d468c78, type: 3}
+      propertyPath: m_fontSize
+      value: 22.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 4816183542477259275, guid: 4bfa5103c96f5a8488c0160b3d468c78, type: 3}
+      propertyPath: m_enableWordWrapping
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -17238,6 +17250,14 @@ PrefabInstance:
       propertyPath: m_SizeDelta.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1285067760183939079, guid: 26fd8da1e17c1454bae06764ec3dbdd4, type: 3}
+      propertyPath: m_Size
+      value: 0.00000020345053
+      objectReference: {fileID: 0}
+    - target: {fileID: 1285067760183939079, guid: 26fd8da1e17c1454bae06764ec3dbdd4, type: 3}
+      propertyPath: m_Value
+      value: -0.058763433
+      objectReference: {fileID: 0}
     - target: {fileID: 1504189606392660864, guid: 26fd8da1e17c1454bae06764ec3dbdd4, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -17304,11 +17324,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1504189606392660864, guid: 26fd8da1e17c1454bae06764ec3dbdd4, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0.4000244
+      value: -4
       objectReference: {fileID: 0}
     - target: {fileID: 1504189606392660864, guid: 26fd8da1e17c1454bae06764ec3dbdd4, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -4.5
+      value: -11
       objectReference: {fileID: 0}
     - target: {fileID: 1504189606392660864, guid: 26fd8da1e17c1454bae06764ec3dbdd4, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -17344,7 +17364,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5013302284713693679, guid: 26fd8da1e17c1454bae06764ec3dbdd4, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 155.61426
+      value: 155.61446
       objectReference: {fileID: 0}
     - target: {fileID: 5925069311659109175, guid: 26fd8da1e17c1454bae06764ec3dbdd4, type: 3}
       propertyPath: m_AnchorMax.x
@@ -18424,8 +18444,8 @@ RectTransform:
   m_LocalScale: {x: 0, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1821929841}
   - {fileID: 463604033}
+  - {fileID: 1821929841}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}

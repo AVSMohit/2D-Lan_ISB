@@ -76,7 +76,7 @@ public class PressurePadManager : NetworkBehaviour
             var playerName = client.Value.PlayerObject.GetComponent<PlayerName>();
             if (playerName != null)
             {
-                playerNames[clientId] = new FixedString32Bytes(playerName.playerName.Value);
+                playerNames[clientId] = new FixedString32Bytes(playerName.playerID.Value);
             }
         }
     }
