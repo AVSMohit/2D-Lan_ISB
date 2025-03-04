@@ -24,7 +24,11 @@ public class PlayerController : NetworkBehaviour
 
     public float weight = 1f;
 
-    
+    public NetworkVariable<Color> playerColor = new NetworkVariable<Color>(Color.white,
+    NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+
+
+
     // Start is called before the first frame update
     void Start()
     {
@@ -35,8 +39,52 @@ public class PlayerController : NetworkBehaviour
         {
             cameraController.AddPlayer(transform);
         }
-    }
 
+
+        playerColor.OnValueChanged += (oldColor, newColor) =>
+        {
+            GetComponent<SpriteRenderer>().color = newColor;
+        };
+
+        if (IsOwner)
+        {
+            ApplyGenderColor();
+        }
+    }
+    public void ApplyGenderColor()
+    {
+        if (!IsOwner) return; // Only the owner should change their own color
+
+        Color newColor;
+
+        string gender = PlayerPrefs.GetString("PlayerGender", "Male");
+        Debug.Log($"Applying gender color: {gender}");
+
+        SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
+
+            if (gender == "Male")
+                ColorUtility.TryParseHtmlString("#007AFE", out newColor); // Hex for light blue
+            else if (gender == "Female")
+                ColorUtility.TryParseHtmlString("#FE88BD", out newColor); // Hex for pink
+            else
+                ColorUtility.TryParseHtmlString("#FFFFFF", out newColor); // Default: White
+
+           SetPlayerColorServerRpc(newColor);
+        
+    }
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+
+        // Apply stored color from the network variable
+        GetComponent<SpriteRenderer>().color = playerColor.Value;
+    }
+    [ServerRpc]
+    void SetPlayerColorServerRpc(Color color)
+    {
+        if (!IsSpawned) return;
+        playerColor.Value = color;
+    }
     private void OnEnable()
     {
         gameObject.tag = "Player";

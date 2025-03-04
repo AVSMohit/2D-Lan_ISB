@@ -1,111 +1,91 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using Unity.Collections;
 using UnityEngine.SceneManagement;
 
 public class LobbyManager : NetworkBehaviour
 {
-    public TMP_Text[] playerTexts; // Array to hold player Text UI elements
+    public TMP_Text[] playerTexts; // Text fields for player slots
     public Button startGameButton;
-    public TMP_Text roomCodeText; // Text to display the room code
+    public TMP_Text roomCodeText; // Room code display
     public GameObject joinPanel;
     public GameObject lobbyPanel;
 
-    private NetworkList<FixedString32Bytes> playerNames;
+    public Button maleButton;
+    public Button femaleButton;
 
-    private void Awake()
-    {
-        playerNames = new NetworkList<FixedString32Bytes>();
-    }
+    private List<ulong> connectedPlayers = new List<ulong>(); // Store connected player IDs
 
     private void Start()
     {
+        maleButton.onClick.AddListener(() => SetGender("Male"));
+        femaleButton.onClick.AddListener(() => SetGender("Female"));
+
         NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
         NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
 
-        playerNames.OnListChanged += OnPlayerNamesChanged;
-
         UpdateLobbyUI();
+    }
+
+    public void SetGender(string gender)
+    {
+        PlayerPrefs.SetString("PlayerGender", gender);
+        PlayerPrefs.Save();
+        Debug.Log($"Gender set to: {gender}");
+
+        // Apply new color immediately if the player is already in the game
+        PlayerController localPlayer = FindObjectOfType<PlayerController>();
+        if (localPlayer != null)
+        {
+            localPlayer.ApplyGenderColor();
+        }
     }
 
     public void EnableStartGameButton()
     {
         if (NetworkManager.Singleton.IsHost)
         {
-            Debug.Log("Enabling Start Game button for host.");
             startGameButton.gameObject.SetActive(true);
             startGameButton.interactable = true;
             startGameButton.onClick.AddListener(OnStartGameClicked);
-            Debug.Log("Host joined. Start Game button should be interactable and visible.");
         }
     }
 
     private void OnClientConnected(ulong clientId)
     {
         Debug.Log($"Client {clientId} connected.");
-        if (NetworkManager.Singleton.IsHost)
+
+        if (!connectedPlayers.Contains(clientId))
         {
-            Debug.Log("Host detected OnClientConnected.");
-            NotifyClientToSetNameClientRpc(clientId);
+            connectedPlayers.Add(clientId);
         }
 
         UpdateLobbyUI();
         SwitchToLobbyPanel();
     }
 
-    [ClientRpc]
-    private void NotifyClientToSetNameClientRpc(ulong clientId, ClientRpcParams clientRpcParams = default)
-    {
-        if (NetworkManager.Singleton.LocalClientId == clientId)
-        {
-            string playerName = PlayerPrefs.GetString("PlayerName", $"Player {clientId}");
-            SetPlayerNameServerRpc(playerName);
-        }
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    private void SetPlayerNameServerRpc(string playerName, ServerRpcParams rpcParams = default)
-    {
-        playerNames.Add(playerName);
-    }
-
     private void OnClientDisconnected(ulong clientId)
     {
         Debug.Log($"Client {clientId} disconnected.");
-        if (NetworkManager.Singleton.IsHost)
+
+        if (connectedPlayers.Contains(clientId))
         {
-            RemovePlayerNameServerRpc(clientId);
+            connectedPlayers.Remove(clientId);
         }
 
         UpdateLobbyUI();
-    }
-
-    private void OnPlayerNamesChanged(NetworkListEvent<FixedString32Bytes> changeEvent)
-    {
-        UpdateLobbyUI();
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    private void RemovePlayerNameServerRpc(ulong clientId, ServerRpcParams rpcParams = default)
-    {
-        if ((int)clientId < playerNames.Count)
-        {
-            playerNames.RemoveAt((int)clientId);
-        }
     }
 
     public void UpdateLobbyUI()
     {
         for (int i = 0; i < playerTexts.Length; i++)
         {
-            if (i < playerNames.Count)
+            if (i < connectedPlayers.Count)
             {
-                playerTexts[i].text = playerNames[i].ToString();
+                playerTexts[i].text = $"Player {i + 1}"; // Display as Player 1, Player 2, etc.
             }
             else
             {
@@ -125,10 +105,6 @@ public class LobbyManager : NetworkBehaviour
         {
             Debug.Log("Start Game clicked. Loading GameScene.");
             SceneTransitionManager.Instance.TransitionToScene("SplitPath");
-        }
-        else
-        {
-            Debug.Log("Start Game button should not be clickable for clients.");
         }
     }
 

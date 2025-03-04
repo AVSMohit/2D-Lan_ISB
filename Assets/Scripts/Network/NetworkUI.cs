@@ -34,14 +34,11 @@ public class NetworkUI : MonoBehaviour
     {
         string playerName = hostNameInputField.text;
 
-        if (string.IsNullOrEmpty(playerName))
-        {
-            statusText.text = "Please enter a name.";
-            return;
-        }
-
-        // Store the player name in PlayerPrefs
-        PlayerPrefs.SetString("PlayerName", playerName);
+        //if (string.IsNullOrEmpty(playerName))
+        //{
+        //    statusText.text = "Please enter a name.";
+        //    return;
+        //}
 
         await UnityServicesInitializer.InitializeUnityServices();
         try
@@ -75,14 +72,14 @@ public class NetworkUI : MonoBehaviour
 
     private async void StartClient()
     {
-        string playerName = clientNameInputField.text;
+       // string playerName = clientNameInputField.text;
         string joinCode = joinCodeInputField.text;
 
-        if (string.IsNullOrEmpty(playerName))
-        {
-            statusText.text = "Please enter a name.";
-            return;
-        }
+        //if (string.IsNullOrEmpty(playerName))
+        //{
+        //    statusText.text = "Please enter a name.";
+        //    return;
+        //}
 
         if (string.IsNullOrEmpty(joinCode))
         {
@@ -91,7 +88,7 @@ public class NetworkUI : MonoBehaviour
         }
 
         // Store the player name in PlayerPrefs
-        PlayerPrefs.SetString("PlayerName", playerName);
+      //  PlayerPrefs.SetString("PlayerName", playerName);
 
         await UnityServicesInitializer.InitializeUnityServices();
         try

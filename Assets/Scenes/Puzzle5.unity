@@ -8781,7 +8781,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Puzzle 5 - Maze Escape
+  m_text: Puzzle 5/5 - Maze Escape
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 1c9998edd9ab6464d9172b5d04104531, type: 2}
   m_sharedMaterial: {fileID: -3549273854030844464, guid: 1c9998edd9ab6464d9172b5d04104531, type: 2}
@@ -21121,7 +21121,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -0.00001515505, y: 155.61421}
+  m_AnchoredPosition: {x: -0.00001515505, y: 155.61472}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &2114273743067303828
@@ -21761,7 +21761,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 8992883837992265131}
   m_HandleRect: {fileID: 8239309898860023043}
   m_Direction: 2
-  m_Value: 0
+  m_Value: -0.0000030397127
   m_Size: 0.48128602
   m_NumberOfSteps: 0
   m_OnValueChanged:

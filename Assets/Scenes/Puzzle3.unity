@@ -2729,6 +2729,18 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 4816183542477259275, guid: 4bfa5103c96f5a8488c0160b3d468c78, type: 3}
+      propertyPath: m_text
+      value: Puzzle 3/5 - Mirrors
+      objectReference: {fileID: 0}
+    - target: {fileID: 4816183542477259275, guid: 4bfa5103c96f5a8488c0160b3d468c78, type: 3}
+      propertyPath: m_fontSize
+      value: 25.3
+      objectReference: {fileID: 0}
+    - target: {fileID: 4816183542477259275, guid: 4bfa5103c96f5a8488c0160b3d468c78, type: 3}
+      propertyPath: m_enableWordWrapping
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -17344,7 +17356,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5013302284713693679, guid: 26fd8da1e17c1454bae06764ec3dbdd4, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 155.61426
+      value: 155.61491
       objectReference: {fileID: 0}
     - target: {fileID: 5925069311659109175, guid: 26fd8da1e17c1454bae06764ec3dbdd4, type: 3}
       propertyPath: m_AnchorMax.x
