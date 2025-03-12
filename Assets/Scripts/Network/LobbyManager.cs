@@ -65,6 +65,20 @@ public class LobbyManager : NetworkBehaviour
 
         UpdateLobbyUI();
         SwitchToLobbyPanel();
+
+        if (connectedPlayers.Count >= 0)
+        {
+           StartGame();
+        }
+    }
+
+    void StartGame()
+    {
+        if (NetworkManager.Singleton.IsHost) 
+        {
+            Debug.Log("Starting game...");
+            SceneTransitionManager.Instance.TransitionToScene("SplitPath");
+        }
     }
 
     private void OnClientDisconnected(ulong clientId)
