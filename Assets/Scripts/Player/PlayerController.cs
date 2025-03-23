@@ -1,11 +1,12 @@
-﻿using System.Collections;
-using UnityEngine;
+using System.Collections;
+using System.Collections.Generic;
 using Unity.Netcode;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 using TMPro;
-
+using System.Security.Cryptography;
 public class PlayerController : NetworkBehaviour
 {
-    [Header("Movement")]
     public float moveSpeed;
     public float jumpForce = 5f;
     private Rigidbody2D rb;
@@ -14,87 +15,76 @@ public class PlayerController : NetworkBehaviour
     public LayerMask groundLayer;
     private bool gravityEnabled = false;
 
-    [Header("Ground Check")]
     public Transform groundCheck;
     public float groundCheckRadius = 0.1f;
 
-    [Header("UI & Visuals")]
+    CameraController cameraController;
+
     public TMP_Text interactText;
-    private CameraController cameraController;
+
     public float weight = 1f;
 
-    // ✅ Network-synced color (server-authoritative)
-    public NetworkVariable<Color> playerColor = new NetworkVariable<Color>(
-        Color.white,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server
-    );
+    public NetworkVariable<Color> playerColor = new NetworkVariable<Color>(Color.white,
+    NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
-    private void Start()
+
+
+    // Start is called before the first frame update
+    void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         rb.gravityScale = 0;
-
         cameraController = FindObjectOfType<CameraController>();
         if (cameraController != null)
         {
             cameraController.AddPlayer(transform);
         }
 
-        // ✅ Apply synced color on every client
+
         playerColor.OnValueChanged += (oldColor, newColor) =>
         {
             GetComponent<SpriteRenderer>().color = newColor;
         };
 
-        // Apply existing color (in case spawn happens late)
-        GetComponent<SpriteRenderer>().color = playerColor.Value;
+        if (IsOwner)
+        {
+            ApplyGenderColor();
+        }
     }
+    public void ApplyGenderColor()
+    {
+        if (!IsOwner) return; // Only the owner should change their own color
 
+        Color newColor;
+
+        string gender = PlayerPrefs.GetString("PlayerGender", "Male");
+        Debug.Log($"Applying gender color: {gender}");
+
+        SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
+
+            if (gender == "Male")
+                ColorUtility.TryParseHtmlString("#007AFE", out newColor); // Hex for light blue
+            else if (gender == "Female")
+                ColorUtility.TryParseHtmlString("#FE88BD", out newColor); // Hex for pink
+            else
+                ColorUtility.TryParseHtmlString("#FFFFFF", out newColor); // Default: White
+
+           SetPlayerColorServerRpc(newColor);
+        
+    }
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
 
-        // ✅ Only server sets spawn position + color
-        if (IsServer)
-        {
-            StartCoroutine(DelayedAssignSpawnAndColor());
-        }
+        // Apply stored color from the network variable
+        GetComponent<SpriteRenderer>().color = playerColor.Value;
     }
-
-    private IEnumerator DelayedAssignSpawnAndColor()
+    [ServerRpc]
+    void SetPlayerColorServerRpc(Color color)
     {
-        yield return new WaitForSeconds(0.25f);
-
-        // ✅ Set spawn position
-        var spawnManager = FindObjectOfType<SpawnManager>();
-        if (spawnManager != null)
-        {
-            var spawn = spawnManager.GetSpawnPointForPlayer(OwnerClientId);
-            if (spawn != null)
-            {
-                transform.position = spawn.position;
-                Debug.Log($"✅ [SERVER] Player {OwnerClientId} moved to spawn: {spawn.position}");
-            }
-            else
-            {
-                Debug.LogWarning($"❌ No spawn point for player {OwnerClientId}");
-            }
-        }
-
-        // ✅ Apply gender-based color
-        string gender = PlayerPrefs.GetString("PlayerGender", "Male");
-        Color newColor = Color.white;
-
-        if (gender == "Male")
-            ColorUtility.TryParseHtmlString("#007AFE", out newColor);
-        else if (gender == "Female")
-            ColorUtility.TryParseHtmlString("#FE88BD", out newColor);
-
-        playerColor.Value = newColor;
-        Debug.Log($"🎨 [SERVER] Applied color {newColor} to Player {OwnerClientId}");
+        if (!IsSpawned) return;
+        playerColor.Value = color;
     }
-
     private void OnEnable()
     {
         gameObject.tag = "Player";
@@ -108,7 +98,8 @@ public class PlayerController : NetworkBehaviour
         }
     }
 
-    private void Update()
+    // Update is called once per frame
+    void Update()
     {
         if (!IsOwner) return;
 
@@ -116,6 +107,7 @@ public class PlayerController : NetworkBehaviour
 
         if (gravityEnabled)
         {
+            // Handle jumping only when gravity is enabled
             if (Input.GetButtonDown("Jump") && isGrounded)
             {
                 Jump();
@@ -123,25 +115,32 @@ public class PlayerController : NetworkBehaviour
         }
         else
         {
+            // Allow vertical movement when gravity is disabled
             moveInput.y = Input.GetAxis("Vertical");
         }
     }
 
     private void FixedUpdate()
     {
-        if (!IsOwner) return;
-
-        if (gravityEnabled)
+        if (IsOwner)
         {
-            rb.velocity = new Vector2(moveInput.x * moveSpeed, rb.velocity.y);
-            isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
-        }
-        else
-        {
-            rb.velocity = moveInput * moveSpeed;
-        }
+            if (gravityEnabled)
+            {
+                // Apply gravity and horizontal movement when gravity is enabled
+                rb.velocity = new Vector2(moveInput.x * moveSpeed, rb.velocity.y);
 
-        rb.gravityScale = gravityEnabled ? 1 : 0;
+                // Check if grounded
+                isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
+            }
+            else
+            {
+                // Allow free movement when gravity is disabled
+                rb.velocity = moveInput * moveSpeed;
+            }
+
+            // Apply gravity scale
+            rb.gravityScale = gravityEnabled ? 1 : 0;
+        }
     }
 
     private void Jump()

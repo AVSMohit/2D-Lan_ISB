@@ -41,10 +41,6 @@ public class PlayerSpawnHandler : NetworkBehaviour
             Debug.Log($"Assigning spawn point for client {clientId}");
             transform.position = spawnPosition;
             Debug.Log($"Player {clientId} moved to spawn point at {spawnPosition}");
-
-            // Apply correction on spawn
-            GetComponent<NetworkObject>().TrySetParent((Transform)null, true);
-
         }
     }
 }

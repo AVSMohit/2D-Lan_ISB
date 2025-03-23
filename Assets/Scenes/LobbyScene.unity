@@ -1774,7 +1774,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &607479620
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2211,7 +2211,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &684448956
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2439,7 +2439,7 @@ MonoBehaviour:
   NetworkConfig:
     ProtocolVersion: 0
     NetworkTransport: {fileID: 834480924}
-    PlayerPrefab: {fileID: 4719466272874342776, guid: 5da9b7ec00239cd4b8505b7a4deebc08, type: 3}
+    PlayerPrefab: {fileID: 0}
     Prefabs:
       NetworkPrefabsLists:
       - {fileID: 11400000, guid: edfd334677f28a64c8b28231d372f489, type: 2}
@@ -5479,7 +5479,6 @@ GameObject:
   - component: {fileID: 1852292798}
   - component: {fileID: 1852292800}
   - component: {fileID: 1852292799}
-  - component: {fileID: 1852292801}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -5514,6 +5513,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6577824b069f05d44bdd6881384df7de, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerPrefab: {fileID: 4719466272874342776, guid: 5da9b7ec00239cd4b8505b7a4deebc08, type: 3}
   clientStatusText: {fileID: 1082363672}
 --- !u!114 &1852292799
 MonoBehaviour:
@@ -5549,18 +5549,6 @@ MonoBehaviour:
   SpawnWithObservers: 1
   DontDestroyWithOwner: 0
   AutoObjectParentSync: 1
---- !u!114 &1852292801
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1852292796}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b85b7bb216910c6418063c77ca92f938, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1856151920
 GameObject:
   m_ObjectHideFlags: 0
@@ -6159,7 +6147,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2056502463
 RectTransform:
   m_ObjectHideFlags: 0

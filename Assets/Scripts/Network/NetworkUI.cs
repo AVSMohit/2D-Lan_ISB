@@ -1,19 +1,13 @@
-﻿using System.Collections;
+using System.Collections;
 using TMPro;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
-using UnityEngine.UI;
-using Unity.Services.Lobbies;
-using Unity.Services.Lobbies.Models;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using Unity.Networking.Transport.Relay;
-using System.Collections.Generic;
-using System;
-using System.Threading.Tasks;
-
-//using UnityEditor.EditorTools;
+using UnityEngine.UI;
+using UnityEditor.EditorTools;
 
 public class NetworkUI : MonoBehaviour
 {
@@ -28,155 +22,158 @@ public class NetworkUI : MonoBehaviour
     public GameObject lobbyPanel;
     public GameManager gameManager;
 
-    private void Start()
+    private async void Start()
     {
+        await UnityServicesInitializer.InitializeUnityServices();
 
         // Add listeners to buttons
-        //  hostButton.onClick.AddListener(StartHost);
+      //  hostButton.onClick.AddListener(StartHost);
         clientButton.onClick.AddListener(JoinOrCreateRoom);
     }
     private async void JoinOrCreateRoom()
     {
-        Debug.Log("🕒 Waiting for Unity Services...");
-        await UnityServicesInitializer.WaitForInitialization();
-        Debug.Log("✅ Unity Services Ready!");
+        await UnityServicesInitializer.InitializeUnityServices();
 
-        string roomCode = joinCodeInputField.text.Trim();
-        if (string.IsNullOrEmpty(roomCode))
+        string joinCode = joinCodeInputField.text.Trim();
+
+        if (string.IsNullOrEmpty(joinCode))
         {
             statusText.text = "Please enter a room code.";
             return;
         }
 
-        Lobby joinedLobby = null;
-        string relayJoinCode = null;
+        string relayJoinCode = RoomManager.Instance.GetRelayJoinCode(joinCode);
 
-        // 🧠 QUERY ATTEMPT 1
-        var query = await Lobbies.Instance.QueryLobbiesAsync(new QueryLobbiesOptions
+        if (string.IsNullOrEmpty(relayJoinCode))
         {
-            Filters = new List<QueryFilter>
-    {
-        new QueryFilter(
-            field: QueryFilter.FieldOptions.Name,
-            op: QueryFilter.OpOptions.EQ,
-            value: roomCode)
-    }
-        });
-
-
-        if (query.Results.Count == 0)
-        {
-            Debug.LogWarning("⚠ No matching lobby found. Retrying in 1 second...");
-            await Task.Delay(1000); // Wait and try again
-
-            // 🧠 QUERY ATTEMPT 2
-            query = await Lobbies.Instance.QueryLobbiesAsync(new QueryLobbiesOptions
-            {
-                Filters = new List<QueryFilter>
-            {
-              new QueryFilter(
-                field: QueryFilter.FieldOptions.Name,
-                op: QueryFilter.OpOptions.EQ,
-                value: roomCode
-            )
-
-            }
-            });
-        }
-
-        if (query.Results.Count > 0)
-        {
-            joinedLobby = query.Results[0];
-            relayJoinCode = joinedLobby.Data["relayCode"].Value;
-
-            Debug.Log($"🎯 Found lobby with code {roomCode}, relay join code: {relayJoinCode}");
-
-            try
-            {
-                var joinAllocation = await RelayService.Instance.JoinAllocationAsync(relayJoinCode);
-                var relayData = new RelayServerData(joinAllocation, "dtls");
-                NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayData);
-                NetworkManager.Singleton.StartClient();
-
-                Debug.Log($"✅ Client joined room '{roomCode}'");
-                RoomManager.ActiveRoomCode = roomCode;
-            }
-            catch (RelayServiceException e)
-            {
-                Debug.LogError($"❌ Failed to join Relay: {e.Message}");
-                statusText.text = "Failed to join room. Try again.";
-                return;
-            }
-        }
-        else
-        {
-            Debug.LogWarning("🛑 No lobby found after 2 attempts. Creating new lobby...");
-
+            // Room doesn't exist, so create it
             try
             {
                 var allocation = await RelayService.Instance.CreateAllocationAsync(4);
                 relayJoinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
+                RoomManager.Instance.AddRoom(joinCode, relayJoinCode);
 
-                var createOptions = new CreateLobbyOptions
-                {
-                    IsPrivate = false,
-                    Data = new Dictionary<string, DataObject>
-                {
-                    { "relayCode", new DataObject(DataObject.VisibilityOptions.Public, relayJoinCode) }
-                }
-                };
-
-                joinedLobby = await Lobbies.Instance.CreateLobbyAsync(roomCode, 4, createOptions);
-
-                var relayData = new RelayServerData(allocation, "dtls");
-                NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayData);
+                var relayServerData = new RelayServerData(allocation, "dtls");
+                NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
                 NetworkManager.Singleton.StartHost();
 
-                Debug.Log($"✅ Host created lobby '{roomCode}' with relay code '{relayJoinCode}'");
-                RoomManager.ActiveRoomCode = roomCode;
-
-                // Optional: start sending heartbeat to keep lobby alive
-                _ = SendLobbyHeartbeat(joinedLobby.Id);
+                statusText.text = $"Room Code: {joinCode}";
+                Debug.Log($"Host started with room code: {joinCode}");
             }
             catch (RelayServiceException e)
             {
-                Debug.LogError($"❌ Relay or Lobby creation failed: {e.Message}");
-                statusText.text = $"Error: {e.Message}";
-                return;
+                Debug.LogError($"Relay Service Error: {e.Message}");
+                statusText.text = $"Relay Service Error: {e.Message}";
+            }
+        }
+        else
+        {
+            // Room exists, so join it
+            try
+            {
+                var joinAllocation = await RelayService.Instance.JoinAllocationAsync(relayJoinCode);
+                var relayServerData = new RelayServerData(joinAllocation, "dtls");
+                NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
+                NetworkManager.Singleton.StartClient();
+
+                statusText.text = $"Joined room: {joinCode}";
+                Debug.Log($"Client joined room with code: {joinCode}");
+            }
+            catch (RelayServiceException e)
+            {
+                Debug.LogError($"Relay Service Error: {e.Message}");
+                statusText.text = $"Relay Service Error: {e.Message}";
             }
         }
 
-        // Finalize UI
         gameManager.InitializeGameManager();
         lobbyManager.UpdateLobbyUI();
         joinPanel.SetActive(false);
         lobbyPanel.SetActive(true);
     }
 
-    private async Task SendLobbyHeartbeat(string lobbyId)
-    {
-        while (true)
-        {
-            await Task.Delay(15000);
-            try
-            {
-                await Lobbies.Instance.SendHeartbeatPingAsync(lobbyId);
-                Debug.Log("💓 Sent lobby heartbeat ping");
-            }
-            catch
-            {
-                Debug.LogWarning("Heartbeat failed or lobby expired.");
-                break;
-            }
-        }
 
-    }
+    //private async void StartHost()
+    //{
+    //    string playerName = hostNameInputField.text;
 
+    //    //if (string.IsNullOrEmpty(playerName))
+    //    //{
+    //    //    statusText.text = "Please enter a name.";
+    //    //    return;
+    //    //}
 
+    //    await UnityServicesInitializer.InitializeUnityServices();
+    //    try
+    //    {
+    //        var allocation = await RelayService.Instance.CreateAllocationAsync(4); // Allow up to 4 connections
+    //        var joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
 
+    //        statusText.text = $"Join Code: {joinCode}";
+    //        Debug.Log($"Join code generated: {joinCode}");
 
+    //        var relayServerData = new RelayServerData(allocation, "dtls");
+    //        NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
 
+    //        NetworkManager.Singleton.StartHost();
+    //        Debug.Log("Host started.");
 
+    //        lobbyManager.UpdateLobbyUI();
+    //        lobbyManager.DisplayRoomCode(joinCode);
+    //        joinPanel.SetActive(false);
+    //        lobbyPanel.SetActive(true);
 
+    //        gameManager.InitializeGameManager();
+    //        lobbyManager.EnableStartGameButton();
+    //    }
+    //    catch (RelayServiceException e)
+    //    {
+    //        Debug.LogError($"Relay Service Error: {e.Message}");
+    //        statusText.text = $"Relay Service Error: {e.Message}";
+    //    }
+    //}
 
+    //private async void StartClient()
+    //{
+    //   // string playerName = clientNameInputField.text;
+    //    string joinCode = joinCodeInputField.text;
+
+    //    //if (string.IsNullOrEmpty(playerName))
+    //    //{
+    //    //    statusText.text = "Please enter a name.";
+    //    //    return;
+    //    //}
+
+    //    if (string.IsNullOrEmpty(joinCode))
+    //    {
+    //        statusText.text = "Please enter a join code.";
+    //        return;
+    //    }
+
+    //    // Store the player name in PlayerPrefs
+    //  //  PlayerPrefs.SetString("PlayerName", playerName);
+
+    //    await UnityServicesInitializer.InitializeUnityServices();
+    //    try
+    //    {
+    //        var joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
+
+    //        var relayServerData = new RelayServerData(joinAllocation, "dtls");
+    //        NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
+
+    //        NetworkManager.Singleton.StartClient();
+    //        Debug.Log("Client started.");
+
+    //        gameManager.InitializeGameManager();
+
+    //        lobbyManager.UpdateLobbyUI();
+    //        joinPanel.SetActive(false);
+    //        lobbyPanel.SetActive(true);
+    //    }t
+    //    catch (RelayServiceException e)
+    //    {
+    //        Debug.LogError($"Relay Service Error: {e.Message}");
+    //        statusText.text = $"Relay Service Error: {e.Message}";
+    //    }
+    //}
 }

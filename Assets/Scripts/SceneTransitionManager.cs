@@ -30,7 +30,7 @@ public class SceneTransitionManager : MonoBehaviour
     {
         if (NetworkManager.Singleton.IsServer)  // Ensure only the server handles scene transition
         {
-            //DestroyAllPlayers();
+            DestroyAllPlayers();
             // Set the flag to true to track that a scene is loading
             isSceneLoading = true;
 
@@ -38,48 +38,33 @@ public class SceneTransitionManager : MonoBehaviour
 
             // Subscribe to the scene event to respawn players after the new scene is loaded
             NetworkManager.Singleton.SceneManager.OnSceneEvent += OnSceneLoaded;
-            NetworkManager.Singleton.SceneManager.LoadScene(sceneName, LoadSceneMode.Single);
 
+            // Load the new scene across all clients
+            NetworkManager.Singleton.SceneManager.LoadScene(sceneName, LoadSceneMode.Single);
         }
     }
 
-    //private void OnSceneLoaded(SceneEvent sceneEvent)
-    //{
-    //    if(sceneEvent.SceneEventType == SceneEventType.LoadComplete && NetworkManager.Singleton.IsServer)
-    //    {
-    //        Debug.Log("Scene loaded, respawning players.");
-
-    //        foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
-    //        {
-    //            // Ensurei that players are respawned if they do not already exist
-    //            if (client.PlayerObject == null)
-    //            {
-    //                GameManager gameManager = FindObjectOfType<GameManager>();
-    //                if (gameManager != null)
-    //                {
-    //                    gameManager.RespawnPlayer(client.ClientId);
-    //                }
-    //                else
-    //                {
-    //                    Debug.LogError("GameManager not found to respawn players!");
-    //                }
-    //            }
-    //        }
-
-    //        NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneLoaded;
-    //    }
-    //}
-
     private void OnSceneLoaded(SceneEvent sceneEvent)
     {
-        if (sceneEvent.SceneEventType == SceneEventType.LoadComplete && NetworkManager.Singleton.IsServer)
+        if(sceneEvent.SceneEventType == SceneEventType.LoadComplete && NetworkManager.Singleton.IsServer)
         {
-            Debug.Log("Scene loaded, repositioning players...");
+            Debug.Log("Scene loaded, respawning players.");
 
-            SpawnManager spawnManager = FindObjectOfType<SpawnManager>();
-            if (spawnManager != null)
+            foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
             {
-                spawnManager.AssignSpawnPoints(); // reposition auto-spawned players
+                // Ensurei that players are respawned if they do not already exist
+                if (client.PlayerObject == null)
+                {
+                    GameManager gameManager = FindObjectOfType<GameManager>();
+                    if (gameManager != null)
+                    {
+                        gameManager.RespawnPlayer(client.ClientId);
+                    }
+                    else
+                    {
+                        Debug.LogError("GameManager not found to respawn players!");
+                    }
+                }
             }
 
             NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneLoaded;

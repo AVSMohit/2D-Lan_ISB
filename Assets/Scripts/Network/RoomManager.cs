@@ -6,8 +6,6 @@ public class RoomManager : MonoBehaviour
     public static RoomManager Instance { get; private set; }
 
     private Dictionary<string, string> roomCodeToRelayCode = new Dictionary<string, string>();
-    public static string ActiveRoomCode { get; set; } // Tracks the current session code
-
 
     private void Awake()
     {
@@ -39,13 +37,4 @@ public class RoomManager : MonoBehaviour
     {
         return roomCodeToRelayCode.ContainsKey(roomCode);
     }
-    public void RemoveRoom(string roomCode)
-    {
-        if (roomCodeToRelayCode.ContainsKey(roomCode))
-        {
-            Debug.Log($"Removing room: {roomCode}");
-            roomCodeToRelayCode.Remove(roomCode);
-        }
-    }
-
 }
