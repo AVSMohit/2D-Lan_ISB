@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
 using UnityEngine;
@@ -8,49 +8,55 @@ using UnityEngine.SceneManagement;
 
 public class LobbyManager : NetworkBehaviour
 {
-    public TMP_Text[] playerTexts; // Text fields for player slots
+    [Header("UI")]
+    public TMP_Text[] playerTexts;
     public Button startGameButton;
-    public TMP_Text roomCodeText; // Room code display
+    public TMP_Text roomCodeText;
     public GameObject joinPanel;
     public GameObject lobbyPanel;
 
+    [Header("Gender Selection")]
     public Button maleButton;
     public Button femaleButton;
 
-    private List<ulong> connectedPlayers = new List<ulong>(); // Store connected player IDs
+    // Synced player list
+    public NetworkList<ulong> connectedPlayers = new NetworkList<ulong>();
 
-    private void Start()
+    public override void OnNetworkSpawn()
     {
+        if (IsServer)
+        {
+            // Full resync on spawn
+            connectedPlayers.Clear();
+
+            foreach (var kvp in NetworkManager.Singleton.ConnectedClients)
+            {
+                if (!connectedPlayers.Contains(kvp.Key))
+                {
+                    connectedPlayers.Add(kvp.Key);
+                }
+            }
+
+            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
+        }
+
+        connectedPlayers.OnListChanged += OnConnectedPlayersChanged;
+
         maleButton.onClick.AddListener(() => SetGender("Male"));
         femaleButton.onClick.AddListener(() => SetGender("Female"));
-
-        NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
-        NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
 
         UpdateLobbyUI();
     }
 
-    public void SetGender(string gender)
+    private void OnConnectedPlayersChanged(NetworkListEvent<ulong> changeEvent)
     {
-        PlayerPrefs.SetString("PlayerGender", gender);
-        PlayerPrefs.Save();
-        Debug.Log($"Gender set to: {gender}");
+        UpdateLobbyUI();
 
-        // Apply new color immediately if the player is already in the game
-        PlayerController localPlayer = FindObjectOfType<PlayerController>();
-        if (localPlayer != null)
+        if (IsServer && connectedPlayers.Count >= 2)
         {
-            localPlayer.ApplyGenderColor();
-        }
-    }
-
-    public void EnableStartGameButton()
-    {
-        if (NetworkManager.Singleton.IsHost)
-        {
-            startGameButton.gameObject.SetActive(true);
-            startGameButton.interactable = true;
-            startGameButton.onClick.AddListener(OnStartGameClicked);
+            Debug.Log("✅ Room full. Starting game...");
+            SceneTransitionManager.Instance.TransitionToScene("SplitPath");
         }
     }
 
@@ -58,48 +64,33 @@ public class LobbyManager : NetworkBehaviour
     {
         Debug.Log($"Client {clientId} connected.");
 
-        if (!connectedPlayers.Contains(clientId))
+        if (IsServer && !connectedPlayers.Contains(clientId))
         {
             connectedPlayers.Add(clientId);
         }
 
-        UpdateLobbyUI();
         SwitchToLobbyPanel();
-
-        if (connectedPlayers.Count >= 0)
-        {
-           StartGame();
-        }
-    }
-
-    void StartGame()
-    {
-        if (NetworkManager.Singleton.IsHost) 
-        {
-            Debug.Log("Starting game...");
-            SceneTransitionManager.Instance.TransitionToScene("SplitPath");
-        }
     }
 
     private void OnClientDisconnected(ulong clientId)
     {
         Debug.Log($"Client {clientId} disconnected.");
 
-        if (connectedPlayers.Contains(clientId))
+        if (IsServer && connectedPlayers.Contains(clientId))
         {
             connectedPlayers.Remove(clientId);
         }
-
-        UpdateLobbyUI();
     }
 
     public void UpdateLobbyUI()
     {
+        Debug.Log($"[LobbyManager] Updating UI. Connected players: {connectedPlayers.Count}");
+
         for (int i = 0; i < playerTexts.Length; i++)
         {
             if (i < connectedPlayers.Count)
             {
-                playerTexts[i].text = $"Player {i + 1}"; // Display as Player 1, Player 2, etc.
+                playerTexts[i].text = $"Player {i + 1}";
             }
             else
             {
@@ -113,11 +104,21 @@ public class LobbyManager : NetworkBehaviour
         roomCodeText.text = $"Room Code: {roomCode}";
     }
 
+    public void EnableStartGameButton()
+    {
+        if (NetworkManager.Singleton.IsHost)
+        {
+            startGameButton.gameObject.SetActive(true);
+            startGameButton.interactable = true;
+            startGameButton.onClick.AddListener(OnStartGameClicked);
+        }
+    }
+
     private void OnStartGameClicked()
     {
         if (NetworkManager.Singleton.IsHost)
         {
-            Debug.Log("Start Game clicked. Loading GameScene.");
+            Debug.Log("Start Game clicked. Loading game scene.");
             SceneTransitionManager.Instance.TransitionToScene("SplitPath");
         }
     }
@@ -126,5 +127,12 @@ public class LobbyManager : NetworkBehaviour
     {
         joinPanel.SetActive(false);
         lobbyPanel.SetActive(true);
+    }
+
+    public void SetGender(string gender)
+    {
+        PlayerPrefs.SetString("PlayerGender", gender);
+        PlayerPrefs.Save();
+        Debug.Log($"Gender set to: {gender}");
     }
 }

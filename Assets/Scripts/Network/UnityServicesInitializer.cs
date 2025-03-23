@@ -1,29 +1,50 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using System.Threading.Tasks;
 using Unity.Services.Core;
 using Unity.Services.Authentication;
-using System.Threading.Tasks;
+using UnityEngine;
+using Unity.Services.Core.Environments;
 
-public class UnityServicesInitializer : MonoBehaviour
+public static class UnityServicesInitializer
 {
-    async void Start()
-    {
-        await InitializeUnityServices();
-    }
+    private static TaskCompletionSource<bool> _initTask = new TaskCompletionSource<bool>();
+    private static bool _hasStarted = false;
 
     public static async Task InitializeUnityServices()
     {
-        await UnityServices.InitializeAsync();
-        await SignInAnonymously();
+        if (_hasStarted)
+            return;
+
+        _hasStarted = true;
+
+        try
+        {
+            Debug.Log("⏳ Initializing Unity Services...");
+            var options = new InitializationOptions();
+            options.SetEnvironmentName("production"); // Optional, if using Environments
+
+            await UnityServices.InitializeAsync(options);
+            Debug.Log("✅ Unity Services initialized.");
+
+            await AuthenticationService.Instance.SignInAnonymouslyAsync();
+            Debug.Log("✅ Signed in anonymously.");
+
+            _initTask.TrySetResult(true);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError("❌ Unity Services Init Failed: " + e.Message);
+            _initTask.TrySetException(e);
+        }
     }
 
-    private static async Task SignInAnonymously()
+    public static async Task WaitForInitialization()
     {
-        if (!AuthenticationService.Instance.IsSignedIn)
+        // Trigger init if not already started
+        if (!_hasStarted)
         {
-            await AuthenticationService.Instance.SignInAnonymouslyAsync();
-            //Debug.Log("Signed in anonymously.");
+            await InitializeUnityServices();
         }
+
+        await _initTask.Task;
     }
 }

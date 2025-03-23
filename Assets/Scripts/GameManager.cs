@@ -6,7 +6,7 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    public GameObject playerPrefab; // Assign this in the Inspector
+   // public GameObject playerPrefab; // Assign this in the Inspector
     public TMP_Text clientStatusText; // Assign this in the Inspector
 
 
@@ -27,34 +27,33 @@ public class GameManager : MonoBehaviour
     public void OnClientConnected(ulong clientId)
     {
         Debug.Log($"Client {clientId} connected.");
-
-        // Only spawn the player if a scene is not currently loading
-        if (!SceneTransitionManager.Instance.isSceneLoading)
-        {
-            Debug.Log($"Spawning player for client {clientId}");
-           // SpawnPlayer(clientId);  // Spawn only on first connection, not during scene transitions
-        }
-    }
-
-
-    private void SpawnPlayer(ulong clientId)
-    {
-        if (!NetworkManager.Singleton.IsServer) return;
-
         var spawnManager = FindObjectOfType<SpawnManager>();
+        // Only spawn the player if a scene is not currently loading
         if (spawnManager != null)
         {
-            var spawnPosition = spawnManager.GetSpawnPointForPlayer(clientId).position;
-            var playerInstance = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
-
-            playerInstance.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId);
-            Debug.Log($"Player {clientId} spawned at {spawnPosition}");
-        }
-        else
-        {
-            Debug.LogError("SpawnManager not found!");
+            spawnManager.AssignSpawnPoints(); // Assign + move existing players
         }
     }
+
+
+    //private void SpawnPlayer(ulong clientId)
+    //{
+    //    if (!NetworkManager.Singleton.IsServer) return;
+
+    //    var spawnManager = FindObjectOfType<SpawnManager>();
+    //    if (spawnManager != null)
+    //    {
+    //        var spawnPosition = spawnManager.GetSpawnPointForPlayer(clientId).position;
+    //        var playerInstance = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
+
+    //        playerInstance.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId);
+    //        Debug.Log($"Player {clientId} spawned at {spawnPosition}");
+    //    }
+    //    else
+    //    {
+    //        Debug.LogError("SpawnManager not found!");
+    //    }
+    //}
 
     //private void OnEnable()
     //{
@@ -65,7 +64,6 @@ public class GameManager : MonoBehaviour
     {
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.SceneManager != null)
         {
-            // Only subscribe to scene events if this is the server
             if (NetworkManager.Singleton.IsServer)
             {
                 NetworkManager.Singleton.SceneManager.OnSceneEvent += OnSceneChanged;
@@ -88,47 +86,77 @@ public class GameManager : MonoBehaviour
 
     public void OnSceneChanged(SceneEvent sceneEvent)
     {
+        //if (sceneEvent.SceneEventType == SceneEventType.LoadComplete && NetworkManager.Singleton.IsServer)
+        //{
+        //    Debug.Log("Scene loaded, respawning players.");
+        //   // isSceneLoading = false;
+
+        //    // Respawn players after the new scene loads
+        //    foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+        //    {
+        //        if (client.PlayerObject == null) // Ensure players are only respawned if they don't already exist
+        //        {
+        //            RespawnPlayer(client.ClientId);
+        //        }
+        //    }
+
+        //    // Unsubscribe from the scene loaded event to prevent multiple respawns
+        //    NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneChanged;
+        //}
+        //if (sceneEvent.SceneEventType == SceneEventType.LoadComplete && NetworkManager.Singleton.IsServer)
+        //{
+        //    Debug.Log("Scene loaded, respawning players.");
+        //    foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+        //    {
+        //        RespawnPlayer(client.ClientId);
+        //    }
+        //}
         if (sceneEvent.SceneEventType == SceneEventType.LoadComplete && NetworkManager.Singleton.IsServer)
         {
-            Debug.Log("Scene loaded, respawning players.");
-           // isSceneLoading = false;
-
-            // Respawn players after the new scene loads
-            foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+            Debug.Log("Scene loaded. Repositioning players...");
+            var spawnManager = FindObjectOfType<SpawnManager>();
+            if (spawnManager != null)
             {
-                if (client.PlayerObject == null) // Ensure players are only respawned if they don't already exist
-                {
-                    RespawnPlayer(client.ClientId);
-                }
+                spawnManager.AssignSpawnPoints();
             }
-
-            // Unsubscribe from the scene loaded event to prevent multiple respawns
-            NetworkManager.Singleton.SceneManager.OnSceneEvent -= OnSceneChanged;
         }
     }
 
-    private void ReassignPlayersToSpawnPoints()
-    {
-        foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
-        {
-            SpawnPlayer(client.ClientId); // Re-spawn the player at the correct spawn point
-        }
-    }
-    public void RespawnPlayer(ulong clientId)
-    {
-        var spawnManager = FindObjectOfType<SpawnManager>();
-        if (spawnManager != null)
-        {
-            var spawnPosition = spawnManager.GetSpawnPointForPlayer(clientId).position;
-            var playerInstance = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
+    //private void ReassignPlayersToSpawnPoints()
+    //{
+    //    foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
+    //    {
+    //        SpawnPlayer(client.ClientId); // Re-spawn the player at the correct spawn point
+    //    }
+    //}
+    //public void RespawnPlayer(ulong clientId)
+    //{
+    //    //var spawnManager = FindObjectOfType<SpawnManager>();
+    //    //if (spawnManager != null)
+    //    //{
+    //    //    var spawnPosition = spawnManager.GetSpawnPointForPlayer(clientId).position;
+    //    //    var playerInstance = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
 
-            // Ensure the player is spawned as a networked object
-            playerInstance.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId);
-            Debug.Log($"Respawned player {clientId} at {spawnPosition}");
-        }
-        else
-        {
-            Debug.LogError("SpawnManager not found in the new scene!");
-        }
-    }
+    //    //    // Ensure the player is spawned as a networked object
+    //    //    playerInstance.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId);
+    //    //    Debug.Log($"Respawned player {clientId} at {spawnPosition}");
+    //    //}
+    //    //else
+    //    //{
+    //    //    Debug.LogError("SpawnManager not found in the new scene!");
+    //    //}
+    //    var spawnManager = FindObjectOfType<SpawnManager>();
+    //    if (spawnManager != null)
+    //    {
+    //        var spawnPosition = spawnManager.GetSpawnPointForPlayer(clientId).position;
+    //        var playerPrefab = Resources.Load<GameObject>("PlayerPrefab");
+    //        var playerInstance = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
+    //        playerInstance.GetComponent<NetworkObject>().SpawnAsPlayerObject(clientId);
+    //        Debug.Log($"Game Scene: Player {clientId} respawned at {spawnPosition}");
+    //    }
+    //    else
+    //    {
+    //        Debug.LogError("SpawnManager not found in the new scene!");
+    //    }
+    //}
 }
